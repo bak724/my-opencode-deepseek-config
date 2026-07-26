@@ -166,6 +166,29 @@ opencode
 - DeepSeek API Key 是否正确配置（`opencode` → `/connect`）
 - 克隆路径是否为 `~/.config/opencode`，或 `OPENCODE_CONFIG_DIR` 是否正确设置
 
+## OpenCode 实验功能
+
+OpenCode 提供若干实验性功能，通过环境变量开启。以下是最实用的三个：
+
+| 功能 | 一句话 | 开启方式 | 是否已开启 |
+| --- | --- | --- | --- |
+| 后台子代理 | 7 个 task 同时派发，不阻塞 | `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=true` | 未开启，需手动配置环境变量 |
+| 规划模式 | 多阶段深度工作流 | `OPENCODE_EXPERIMENTAL_PLAN_MODE=true` | 未开启，需手动配置环境变量 |
+| 批量工具 | 一次返回多个 tool call 减少往返 | `"experimental": { "batch_tool": true }` | 本仓库 `opencode.json` 已默认开启，无需额外配置 |
+
+**一键体验**：在终端设置总开关，然后按需关闭不需要的功能：
+
+```powershell
+# 总开关
+$env:OPENCODE_EXPERIMENTAL = "true"
+
+# 按需关闭（设为空字符串即关闭）
+$env:OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS = ""
+$env:OPENCODE_EXPERIMENTAL_PLAN_MODE = ""
+```
+
+`batch_tool` 本仓库 `opencode.json` 已默认开启，无需额外配置。
+
 ## 模型分工
 
 本仓库严格限制在 DeepSeek V4 双模型内分工，不引入其他模型：
