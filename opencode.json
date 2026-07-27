@@ -146,7 +146,7 @@
         "review-pr": {
             "description": "Review a PR and post findings as a pending GitHub review",
             "agent": "reviewer",
-            "template": "Load the code-review and gh-cli skills. Review the specified PR's diff, then post the findings as a pending GitHub review (per-line comments plus a body with the severity summary) using `gh pr review --comment`. Never auto-approve — leave the verdict to a human. Do not modify code."
+            "template": "Load the code-review and gh-cli skills. Review the specified PR's diff, then post the findings as a single pending GitHub review via `gh api repos/{owner}/{repo}/pulls/<n>/reviews` (event=COMMENT) with a `comments[]` array for per-line notes plus a body carrying the severity summary — `gh pr review` alone cannot place per-line comments. Never auto-approve — leave the verdict to a human. Do not modify code."
         },
         "plan": {
             "description": "Route to planner for strategic planning",
