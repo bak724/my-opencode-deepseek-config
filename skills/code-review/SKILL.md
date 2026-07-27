@@ -17,25 +17,37 @@ dimensions, depth scales to diff size, and large reviews communicate through
 files instead of context. Pair with the `security-review` skill when the diff
 touches a trust boundary.
 
-## Step 0 — Scope the diff first
+## Step 0 — Scope by *effective* size, not raw lines
 
-Never review blindly. Establish the change set and its size before reading code:
+Never review blindly. Establish the change set before reading code:
 
 - Branch vs base: `git diff --stat main...HEAD` (or the stated base)
 - PR: use the `gh-cli` skill (`gh pr diff <n> --patch`, `gh pr view <n>`)
 - Explicit files: just those paths
 
-Count changed files and net changed lines. Pick the path:
+Then weight each changed file by category — a 2000-line lockfile diff is not a
+2000-line review. Sum the **effective logic lines**:
 
-| Diff size | Path | Behavior |
+| File category | Weight | Examples |
 | --- | --- | --- |
-| **≤ 8 files and ≤ 500 lines** | **Abbreviated** (default) | Single focused pass over the diff and its immediate callers. Report inline. |
-| **larger, or cross-cutting** | **Full** | Walk each dimension deliberately; write findings to a file (see below). |
+| generated / mechanical | **0×** | lockfiles, `*.pb.go`, snapshots, `@generated`, import-only reshuffles |
+| data / config | **0.25×** | `.json`, `.yaml`, `.toml`, `.tf`, fixtures |
+| tests | **0.5×** | `*_test.*`, `*.spec.*`, `__tests__/` |
+| logic | **1×** | everything else (source code) |
+
+Pick the path from effective size **and** stakes:
+
+| Condition | Path | Behavior |
+| --- | --- | --- |
+| **≤ 8 logic files and ≤ 300 effective lines** | **Abbreviated** (default) | Single focused pass over the diff and its immediate callers. Report inline. |
+| **larger** | **Full** | Walk each dimension deliberately; write findings to a file (see below). |
+
+**High-stakes override** — route **Full** regardless of size when any logic/config
+file touches auth/authz, DB migrations or schema, concurrency/locking, or a
+public API/wire contract. These are where a missed finding costs the most.
 
 Abbreviated is the default — it costs ~an order of magnitude fewer tokens.
-Escalate to Full only when the diff is genuinely large or high-risk (auth,
-migrations, public API, concurrency). State which path you took and why in one
-line.
+State which path you took, the effective size, and any stakes trigger in one line.
 
 ## Review dimensions
 
@@ -156,7 +168,7 @@ Lead with a one-line severity summary:
 Then list findings, ordered by severity, each as:
 
 ```
-[severity] <title>  (dimension)
+[severity] <title>  (dimension, confidence: high|medium)
 <!-- id: <12-char-hash> -->  (SHA-256 of file:line:title, for loop dedup)
 location: path/to/file.ext:LINE
 issue:  <what is wrong and the input/condition that triggers it>
@@ -164,8 +176,14 @@ impact: <what breaks, or what an attacker/user gains>
 fix:    <the minimal concrete remediation a flash agent could apply>
 ```
 
-Close with a short overall assessment (merge-ready? blocking items?). If the
-change is genuinely clean, say so plainly — do not manufacture findings.
+Tag each finding's **confidence** (high = verified in code, severity
+proportionate; medium = plausible but not fully traced). Lead with high-confidence
+findings within each severity level.
+
+Close with a short overall assessment (merge-ready? blocking items?) and a brief
+**What Looks Good** line naming the parts that are solid — it tells the author
+what not to second-guess and signals you actually read the change. If the change
+is genuinely clean, say so plainly — do not manufacture findings.
 
 ### Doc drift batching
 
@@ -216,10 +234,21 @@ a REGRESSION (was fixed in the interim, now broken again).
 
 ## Posting to a PR
 
-To publish findings on GitHub (e.g. `/review-pr`), use the `gh-cli` skill:
-draft a pending review with per-line comments (`gh pr review --comment`) or a
-review body summarizing the severity table. Never auto-approve; leave the
-verdict to a human.
+To publish findings on GitHub (e.g. `/review-pr`), use the `gh-cli` skill.
+`gh pr review` posts **only** a top-level verdict + body (`--approve` /
+`--comment` / `--request-changes` with `--body`); it has **no** flag for per-line
+comments. To attach findings to specific lines, post a single pending review via
+the REST API:
+
+```bash
+gh api repos/{owner}/{repo}/pulls/<n>/reviews --method POST \
+  -f event=COMMENT -f body="severity summary…" \
+  -F 'comments[][path]=src/app.ts' -F 'comments[][line]=42' \
+  -F 'comments[][body]=<!-- cr:auth-nullcheck-L42 --> issue…'
+```
+
+Use `event=COMMENT` (never auto-`APPROVE` — leave the verdict to a human). Line
+numbers must be the **new-side** line inside a changed hunk.
 
 Place each finding at the tightest scope its location allows (3-tier placement):
 

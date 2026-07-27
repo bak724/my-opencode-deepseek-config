@@ -184,6 +184,33 @@ gh repo read-dir --ref main --json name,path,size,type
 - `--clobber` overwrites existing output files; without it, writing to an
   existing file is an error.
 
+## Reviewing PRs (`gh pr review` vs inline comments)
+
+`gh pr review <n>` submits **only** a top-level review — one verdict + one body:
+
+```bash
+gh pr review <n> --approve  --body "LGTM"
+gh pr review <n> --comment  --body "notes…"        # -c
+gh pr review <n> --request-changes --body "…"       # -r (body required)
+gh pr review <n> --approve --body-file review.md    # -F, use - for stdin
+```
+
+It has **no** flag for per-line comments — a common agent mistake. To attach
+findings to specific lines, post one pending review via the REST API with a
+`comments[]` array (new-side line numbers, inside changed hunks):
+
+```bash
+gh api repos/{owner}/{repo}/pulls/<n>/reviews --method POST \
+  -f event=COMMENT -f body="overall summary" \
+  -F 'comments[][path]=src/app.go' -F 'comments[][line]=42' \
+  -F 'comments[][body]=this needs a nil check' \
+  -F 'comments[][path]=src/app.go' -F 'comments[][line]=88' \
+  -F 'comments[][body]=off-by-one here'
+```
+
+`event`: `APPROVE` | `REQUEST_CHANGES` | `COMMENT`, or omit for a `PENDING`
+draft. Never auto-`APPROVE` from an agent — leave the verdict to a human.
+
 ## `gh api` — the universal fallback
 
 When no porcelain command covers what you need:
@@ -413,7 +440,7 @@ gh discussion comment <n> --body "..."
 
 # Actions
 gh run list --workflow ci.yml --branch main --limit 20
-gh run view <id> --log --log-failed
+gh run view <id> --log-failed          # failed-step logs only (--log for full; the two are mutually exclusive)
 gh run watch <id> --exit-status
 gh run rerun <id> --failed
 
