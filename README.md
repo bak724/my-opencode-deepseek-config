@@ -241,7 +241,7 @@ $env:OPENCODE_EXPERIMENTAL_PLAN_MODE = ""
 | `/deepwork` | `deep-worker`（deepwork） | 审查门控分阶段执行：plan → review gate → implement → verify → report |
 | `/quick` | `light-orchestrator` | 快速处理简单任务 |
 | `/ui` | `ui-builder` | 前端/UI 工作 |
-| `/review` | `reviewer`（code-review） | 代码审查：按 diff 体量分级、7 维度+严重度、威胁模型校准、对抗性自检 |
+| `/review` | `reviewer`（code-review） | 代码审查：按**有效逻辑体量**+风险分级、7 维度+严重度、威胁模型校准、对抗性自检 |
 | `/review-loop` | `deep-worker`（code-review） | 审查→修复循环：修复+校验+复审，直至干净/5 轮/停滞 |
 | `/review-pr` | `reviewer`（code-review + gh-cli） | 审查 PR 并把结论以待定 Review 形式回帖到 GitHub |
 | `/plan` | `planner` | 制定计划、技术方案 |
@@ -273,7 +273,7 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 | `gh-skill` | 用 `gh skill` 发现、安装、更新、发布 Agent 技能 |
 | `conventional-commits` | 按 Conventional Commits 规范写提交信息与 PR 标题 |
 | `security-review` | 合并前对 diff 做安全审查：注入、XSS、认证、密钥、路径遍历等 |
-| `code-review` | Token 高效多维度代码审查：分级、维度+严重度、对抗性自检+显式拒绝准则、项目上下文校准、文档漂移、审查→修复循环 |
+| `code-review` | Token 高效多维度代码审查：按有效逻辑体量+风险分级路由、维度+严重度、confidence 标注、对抗性自检+显式拒绝准则、项目上下文校准、文档漂移、审查→修复循环、内联评审经 `gh api` 落到具体行 |
 | `git-release` | 准备 Tag 发布：SemVer 推断、发布说明、`gh release create` |
 | `remove-deadcode` | 安全查找并删除死代码，删除前用 LSP 验证 |
 | `opencode-config` | 编写和维护本仓库 OpenCode 配置（agents、skills、commands、permissions） |
@@ -288,7 +288,7 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 
 ## 设计决策与迭代记录
 
-核心思路借鉴了 [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent)（意图门控、只读隔离、反模式）、[oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim)（成本信号、结构化输出、禁止研究/委托、cache safety、session 复用）、[anomalyco/opencode](https://github.com/anomalyco/opencode)（配置 Schema、Skills、subagent_depth）、[cli/cli](https://github.com/cli/cli)（gh 完整命令集、--json+--jq 结构化输出）、[Fission-AI/OpenSpec](https://github.com/Fission-AI/OpenSpec)（delta specs、enablers not gates、progressive rigor）和 [deepreview](https://github.com/mechanai/deepreview)（上下文注入校准、反面论证自检、三层 placement、strict response contract），纯配置实现，零额外依赖。
+核心思路借鉴了 [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent)（意图门控、只读隔离、反模式）、[oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim)（成本信号、结构化输出、禁止研究/委托、cache safety、session 复用）、[anomalyco/opencode](https://github.com/anomalyco/opencode)（配置 Schema、Skills、subagent_depth）、[cli/cli](https://github.com/cli/cli)（gh 完整命令集、--json+--jq 结构化输出、内联评审经 REST API）、[Fission-AI/OpenSpec](https://github.com/Fission-AI/OpenSpec)（delta specs、enablers not gates、progressive rigor）和 [deepreview](https://github.com/mechanai/deepreview)（有效逻辑体量路由、上下文注入校准、反面论证自检、confidence 标注、三层 placement、strict response contract）的优点，纯配置实现，零额外依赖。
 
 > **借鉴而非照搬**：外部分支采用复数键 schema 与本仓库单数键不兼容，不套用；过重的流水线（7 审查 agent + 验证器）只汲取其轻量化设计理念；冗余功能由现有 agent/skill 覆盖，不新增。遵循"精简优先于新增"原则，每次迭代都以净减 token 为目标。
 
@@ -303,6 +303,7 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 | **v16（Agent 清理）** | 移除所有神话名称、合并 4 张路由表为 1 张统一表、gh-cli 扩至 Issues 2.0、新增 `/verify-plan` 命令 |
 | **v17（精准增强）** | spec-workflow 增加 verify 动作 / 更新 vs 新建框架 / Open Questions；reviewer 自动项目上下文校准 |
 | **v18（激进重构）** | 移除 generalist 代理（由 light-orchestrator 覆盖）、所有 agent prompt 精简 30-50%（移除与 AGENTS.md 重复的 Model Leverage 段落）、AGENTS.md 新增 cache safety / 压缩Skills列表、opencode.json 新增 subagent_depth:3、6 个 skill 清理过时上游引用、README 迭代记录从 15 条压缩至本表；当前规模：**10 agent / 16 技能 / 25 命令** |
+| **v19（对齐上游最新版 + 纠错）** | 复核 6 个上游仓库最新版本后聚焦重构：修正 `gh pr review` 无法逐行评论的准确性 Bug（内联评审改走 `gh api .../pulls/{n}/reviews` + `comments[]`）并修 gh-cli 中 `--log --log-failed` 互斥的非法示例；借鉴 deepreview 最新版将 code-review 路由从裸行数改为**有效逻辑体量**（按文件类别 0×/0.25×/0.5×/1× 加权 + 高风险强制 Full），输出新增 confidence 标注与 "What Looks Good"；规模不变，净增删以纠错与提效为主 |
 
 ## 仓库结构
 
