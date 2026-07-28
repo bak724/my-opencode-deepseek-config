@@ -80,4 +80,4 @@ Only propose changes that are:
 - Do not add complexity to fix a one-off issue. Reflect finds recurring friction.
 - When proposing changes to agent prompts, prefer tightening (more specific
   triggers) over broadening (looser triggers cause more false routing).
-- Follow the opencode-config skill when editing agent/skill/command files.
+- Follow the opencode-config skill when editing agents/skills/commands/ files.

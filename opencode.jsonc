@@ -74,10 +74,6 @@
         "plan": {
             "model": "deepseek/deepseek-v4-pro"
         },
-        "general": {
-            "model": "deepseek/deepseek-v4-flash",
-            "fallback": "deepseek/deepseek-v4-pro"
-        },
         "title": {
             "model": "deepseek/deepseek-v4-flash",
             "fallback": "deepseek/deepseek-v4-pro"
@@ -121,7 +117,7 @@
         "deepwork": {
             "description": "Review-gated phased execution for complex multi-file tasks (plan, review, implement, verify, report)",
             "agent": "deep-worker",
-            "template": "Load the deepwork skill and run its phased execution workflow on the requested task. Walk through each phase: Plan (write plan artifact), Review Gate (reviewer checks plan), Implement (execute plan with todo tracking), Verify (run tests/lint), Report (write completion report). Pause at each gate for human approval. Create durable artifacts at each phase so the orchestrator can track progress."
+            "template": "Load the deepwork skill and run its phased execution workflow: Plan (write plan artifact), Review Gate, Implement, Verify, Report. Pause at each gate for human approval. Create durable artifacts at each phase."
         },
         "quick": {
             "description": "Route to light-orchestrator for simple tasks",
@@ -141,7 +137,7 @@
         "review-loop": {
             "description": "Review then fix in a bounded loop until clean (deep-worker)",
             "agent": "deep-worker",
-            "template": "Load the code-review skill and run its review→fix loop on the current diff (or the PR/files provided). Review, apply minimal surgical fixes for critical/major (and clear minor) findings following AGENTS.md, then verify with the project's format/lint/test commands and re-review the changed region. Stop when clean, after 5 iterations, or on a plateau (same finding twice — pause for a human). Report each iteration's severity summary and what you fixed."
+            "template": "Load the code-review skill and run its review\u2192fix loop on the current diff."
         },
         "review-pr": {
             "description": "Review a PR and post findings as a pending GitHub review",
@@ -188,6 +184,11 @@
             "agent": "light-orchestrator",
             "template": "Load the conventional-commits skill. Here is the current state:\n\nStatus:\n!`git status --short`\n\nDiff (staged + unstaged):\n!`git diff HEAD`\n\nStage the relevant changes and write a single Conventional Commits message whose subject explains WHY the change was made from the user's perspective. Do not push."
         },
+        "handoff": {
+            "description": "Compact conversation for next agent session",
+            "agent": "light-orchestrator",
+            "template": "Load the handoff skill. Compact the current conversation into a handoff document saved to the OS temp directory. Reference existing artifacts (specs, plans, diffs) by path — never copy their content. Include a suggested-skills section for the next session. Redact sensitive information."
+        },
         "learn": {
             "description": "Persist durable, non-obvious project facts into AGENTS.md",
             "agent": "light-orchestrator",
@@ -196,7 +197,7 @@
         "rmslop": {
             "description": "Remove AI slop and dead code from the current changes",
             "agent": "deep-worker",
-            "template": "Load the remove-deadcode skill. Review the current diff:\n\n!`git diff HEAD`\n\nRemove AI slop introduced by the changes: filler/boilerplate comments that restate the code, commented-out code, needless defensive wrappers, and any dead code that verification proves is unreferenced. Follow AGENTS.md Comment Discipline. Do not change behavior; verify build/tests still pass and report what you removed."
+            "template": "Load the remove-deadcode skill. Review the current diff and remove AI slop: filler/boilerplate comments that restate the code, commented-out code, needless defensive wrappers, dead code that verification proves is unreferenced. Follow AGENTS.md Comment Discipline. Do not change behavior; verify build/tests still pass and report what you removed."
         },
         "explore": {
             "description": "Pre-proposal research — explore current code and sketch options before committing to a spec (spec-workflow explore action)",
@@ -218,6 +219,11 @@
             "agent": "light-orchestrator",
             "template": "Load the spec-workflow skill and run its archive action for the requested completed change. Fold its delta specs into openspec/specs/<capability>/spec.md (apply ADDED/MODIFIED/REMOVED/RENAMED), then move openspec/changes/<change-id>/ to openspec/changes/archive/YYYY-MM-DD-<change-id>/. Confirm openspec/specs/ reflects reality before finishing."
         },
+        "update": {
+            "description": "Revise an existing spec-driven change proposal in-place",
+            "agent": "planner",
+            "template": "Load the spec-workflow skill and run its update action. Read the current proposal/specs/tasks, apply the requested update, and mark changed items."
+        },
         "codemap": {
             "description": "Generate a structured hierarchical map of the codebase for quick orientation",
             "agent": "explore",
@@ -231,12 +237,12 @@
         "skill": {
             "description": "Manage agent skills — search, preview, install, update, or publish",
             "agent": "light-orchestrator",
-            "template": "Load the gh-skill skill. The user wants to manage agent skills. Use `gh skill` commands to search, preview, install, update, list, or publish skills. For installs targeting opencode, always pass `--agent opencode`. For local development, prefer `--scope project`. Pin to a ref for reproducibility."
+            "template": "Load the gh-skill skill and manage agent skills as requested."
         },
         "verify-plan": {
             "description": "Plan verification before implementation — choose the narrowest proof path",
             "agent": "deep-worker",
-            "template": "Load the verification-planning skill. Before implementing the requested change, plan the narrowest verification path: what check will prove this is correct, and what observable condition means 'done'."
+            "template": "Load the verification-planning skill. Plan the narrowest verification path before implementing the requested change."
         }
     }
 }

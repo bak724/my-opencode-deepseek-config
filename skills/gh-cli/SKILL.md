@@ -1,6 +1,6 @@
 ---
 name: gh-cli
-description: Patterns for invoking the GitHub CLI (gh) from agents. Use when the task mentions GitHub, gh, pull requests/PRs, issues, releases, gists, Actions/workflow runs, forks, repo cloning, reviews, or you need exact gh commands. Covers structured output, pagination, repo targeting, search vs list, issue types/sub-issues/discussions, projects, rulesets, and gh api fallback.
+description: Patterns for invoking the GitHub CLI (gh v2.96.0+) from agents. Use when the task mentions GitHub, gh, pull requests/PRs, issues, releases, gists, Actions/workflow runs, forks, repo cloning, reviews, or you need exact gh commands. Covers structured output, pagination, repo targeting, search vs list, issue types/sub-issues, discussions, projects, rulesets, agent skills, AI commands (copilot, agent-task), repo read-file/read-dir, and gh api fallback.
 license: MIT
 compatibility: opencode
 metadata:
@@ -10,9 +10,9 @@ metadata:
 
 # GitHub CLI (`gh`) agent patterns
 
-Authoritative patterns for driving the official `gh` CLI from agents, based on
-[cli/cli](https://github.com/cli/cli) trunk. Prefer `gh` over raw `curl` or
-`gh api` — `gh` handles auth, pagination, and JSON output automatically.
+Authoritative patterns for driving the official `gh` CLI (v2.96.0) from agents,
+based on [cli/cli](https://github.com/cli/cli) trunk. Prefer `gh` over raw `curl`
+or `gh api` — `gh` handles auth, pagination, and JSON output automatically.
 
 ## Interactivity policy
 
@@ -80,6 +80,11 @@ override. Set `GH_REPO=OWNER/REPO` for session-wide default.
 - Bots author as GitHub Apps: `--author dependabot` fails. Use `--app dependabot`
   (on `pr`/`issue list` and `search prs|issues`).
 - Exclude qualifiers with `--` stop-parser: `gh search issues -- "error -label:bug"`.
+- Advanced search syntax (v2.79.0+): `gh search issues` and `gh search prs` support
+  the full GitHub search qualifier syntax — `author:`, `label:`, `milestone:`,
+  `assignee:`, `review:`, `status:`, `base:`, `head:`, `merged:`,
+  `created:`, `updated:`, `closed:`, `comments:`, `interactions:`, `reactions:`.
+  Combine multiple: `gh search prs --repo cli/cli --author monalisa --label bug --state open`.
 
 ## Issue types, sub-issues, and relationships (v2.94.0+)
 
@@ -97,8 +102,10 @@ override. Set `GH_REPO=OWNER/REPO` for session-wide default.
   `subIssuesSummary`, `blockedBy` (`nodes` + `totalCount`), `blocking` (`nodes` +
   `totalCount`). Compare `nodes.length` vs `totalCount` to detect truncation
   (subIssues capped at 100, blocked/blocking at 50).
-- GHES availability: issue **types** require GHES 3.17+, **blocked-by/blocking**
-  require GHES 3.19+. On older hosts these flags error — fall back to labels.
+- GHES availability: issue **types** require GHES 3.17+, **sub-issues** (parent/sub)
+  require GHES 3.17+, **blocked-by/blocking** relationships require GHES 3.19+. On
+  older hosts these flags error — fall back to labels for types, linked issues for
+  relationships.
 
 ## Discussions (`gh discussion`) — v2.94.0 preview
 
@@ -126,6 +133,7 @@ gh project view <number> --json title,url,fields
 # Items — add issues/PRs to projects
 gh project item-add <number> --url <issue-or-pr-url>
 gh project item-list <number> --owner "@me" --limit 50
+gh project item-list <number> --owner "@me" --query '."Status" == "Todo"'     # filter by field value (v2.87.0+)
 gh project item-edit <item-id> --field-id <field-id> --text "value"
 gh project item-edit <item-id> --field-id <field-id> --iteration-id <id>
 gh project item-edit <item-id> --field-id <field-id> --single-select-option-id <id>
@@ -159,8 +167,11 @@ gh ruleset check -b main -R owner/repo    # check branch compliance
 ```bash
 gh cache list -R owner/repo -L 50 --json key,sizeInBytes,ref
 gh cache delete <key> -R owner/repo
-gh cache delete --all -R owner/repo       # requires confirmation
+gh cache delete --all -R owner/repo --succeed-on-no-caches   # --succeed-on-no-caches avoids non-zero exit when no caches exist
+gh cache delete --ref refs/heads/main -R owner/repo            # delete by ref (v2.86.0)
+gh cache delete --all --ref refs/heads/main -R owner/repo      # all caches for a ref
 ```
+- `gh cache delete --succeed-on-no-caches` (v2.86.0+) exits 0 when no caches match, preventing scripting breaks.
 
 ## Reading files and directories (`gh repo read-file` / `read-dir`) — v2.95.0 preview
 
@@ -325,7 +336,7 @@ gh config set browser ""                                   # disable browser ope
 ## Extensions (`gh extension`)
 
 ```bash
-gh extension install owner/repo                           # install from GitHub
+gh extension install owner/repo                           # install from GitHub (no auth required since v2.90.0)
 gh extension install /path/to/local                       # install from local dir
 gh extension list                                          # list installed
 gh extension upgrade owner/repo                           # upgrade one
@@ -333,6 +344,9 @@ gh extension upgrade --all                                # upgrade all
 gh extension remove owner/repo                            # uninstall (alias for `uninstall`, v2.94.0+)
 gh extension exec <name> [args]                           # run by name
 ```
+
+Note: `gh extension install` no longer requires authentication (v2.90.0+). The
+CLI downloads public extensions without checking for an active session.
 
 ## Aliases (`gh alias`)
 
@@ -349,66 +363,121 @@ First-class command group for discovering, installing, and publishing Agent Skil
 See the `gh-skill` skill for the full workflow.
 
 ```bash
-gh skill list --json name,description           # discover available skills
-gh skill install owner/repo                     # install a specific skill
-gh skill install owner/repo --agent opencode    # install with agent binding (opencode, codex, antigravity, etc.)
-gh skill install --all                          # install all matching skills (v2.94.0+)
-gh skill install --allow-hidden-dirs            # discover skills in .claude/skills/ etc (v2.91.0+)
-gh skill install --upstream                     # force upstream when repo re-publishes a skill (v2.91.0+)
-gh skill install --from-local ./local-repo      # install from a local directory
-gh skill uninstall owner/repo                   # remove an installed skill
-gh skill publish                                # publish a new skill from cwd
+# Discovery
+gh skill search <query> --agent opencode               # search for skills (v2.90.0+)
+gh skill list --agent opencode --json name,description # list available skills
+gh skill preview <skill-id> --agent opencode            # preview a skill's content before installing (v2.90.0+)
+
+# Installation
+gh skill install owner/repo --agent opencode            # install with agent binding
+gh skill install owner/repo --agent opencode --pin v1.2 # pin to a specific tag/ref (v2.90.0+)
+gh skill install owner/repo --scope project              # install to local project (vs global)
+gh skill install --all --agent opencode                  # install all matching skills
+gh skill install --allow-hidden-dirs                     # discover skills in .claude/skills/ etc (v2.91.0+)
+gh skill install --upstream                              # force upstream when repo re-publishes a skill (v2.91.0+)
+gh skill install --from-local ./local-repo               # install from a local directory
+
+# Management
+gh skill update <skill-id> --agent opencode             # update an installed skill (v2.90.0+)
+gh skill uninstall owner/repo                            # remove an installed skill
+gh skill publish                                         # publish a new skill from cwd
 ```
 
 `gh skill install --agent opencode` creates the skill under
 `~/.config/opencode/skills/<name>/SKILL.md`. Use `--agent` to target a specific
 coding agent; omitting it installs to the system-global skills directory.
 
-## AI-integrated commands (`gh agent-task`, `gh copilot`)
+## AI-integrated commands (`gh copilot`, `gh agent-task`)
 
-Newer command groups in `gh` v2.96+ for agent workflows:
+### `gh copilot` — native built-in (v2.86.0+)
+
+The native `gh copilot` command replaces the deprecated `gh copilot` extension
+(Oct 2025). It is a built-in passthrough that downloads and runs the standalone
+Copilot CLI binary (`~/.config/gh/copilot/`).
 
 ```bash
-# Agent tasks — delegate a coding task to a GitHub coding agent (preview)
-gh agent-task create "Fix the login redirect bug" --base main
-gh agent-task list --json id,state,title
-gh agent-task view <id>
+# Prompt-based assistance
+gh copilot "explain this error: cannot find module 'lodash'"
+gh copilot suggest "how to squash the last 3 commits"
+gh copilot "write a bash script to find files larger than 100MB"
 
-# Copilot in the CLI — built-in passthrough that downloads and runs the
-# standalone Copilot CLI binary (~/.config/gh/copilot/); interactive, human-in-the-loop
+# Interactive mode (starts a Copilot session)
 gh copilot
 ```
 
-`gh agent-task` needs an OAuth token (from `gh auth login`, `gho_` prefix) — a
-plain PAT/`GH_TOKEN` is rejected. `gh copilot` is now a **built-in** binary
-passthrough (since ~v2.80); it is **not** the old `gh-copilot` extension, which was
-deprecated Oct 2025 — do not rely on `gh copilot explain/suggest` in scripts.
-Both are interactive; prefer them for human-in-the-loop use, not scripted flows.
+`gh copilot` is agent-driven and human-in-the-loop — it prompts for clarification
+before making changes. Prefer it for interactive development workflows, not
+unattended scripts.
 
-`gh` v2.96.0 detects more programming agents from the environment (antigravity-cli,
-antigravity2.0, codex, opencode) to auto-configure agent-specific behavior in
-commands like `gh skill` and `gh agent-task`.
+### `gh agent-task` — delegate coding tasks (v2.80.0+)
 
-**Request a Copilot code review on a PR** (v2.88+, github.com + GHES 3.15+):
+Aliases: `gh agent`, `gh agents`. Delegates a coding task to a GitHub coding agent
+(preview). Requires an OAuth token from `gh auth login` (`gho_` prefix) — plain
+PAT/`GH_TOKEN` is rejected.
 
 ```bash
-gh pr create --reviewer @copilot --fill      # request review on create
-gh pr edit <n> --add-reviewer @copilot       # or add it afterward
+gh agent-task create --title "Fix the login redirect" --body "Users get 404 after login"
+gh agent-task create --title "Add pagination" --base main
+gh agent-task create --custom-agent my-agent --title "..." --body "..."   # specific agent (v2.83.0+)
+gh agent-task list --json state,title,url --jq '.[]'
+gh agent-task view <id> --json state,title,body --jq '.'
 ```
+
+- `--custom-agent` / `-a` flag (v2.83.0+) selects a named custom agent instead of the default.
+- `--json` / `--jq` / `--template` support for `list` and `view` (v2.88.0+).
+
+### Copilot as reviewer / assignee
+
+Request Copilot reviews on PRs (v2.88.0+, github.com + GHES 3.15+):
+
+```bash
+gh pr create --reviewer @copilot --fill
+gh pr edit <n> --add-reviewer @copilot
+```
+
+Assign Copilot to issues (v2.73.0+, github.com):
+
+```bash
+gh issue edit <n> --add-assignee @copilot
+gh issue create --assignee @copilot            # v2.76.0+
+```
+
+## Release verification (`gh release verify`) — v2.75.0+
+
+Verify release artifact attestations (Sigstore supply-chain). No auth needed for
+public repos.
+
+```bash
+gh release verify -R cli/cli                  # verify attestation for latest release
+gh release verify v2.96.0 -R cli/cli          # verify a specific release
+gh release verify-asset cli.zip -R cli/cli    # verify a specific asset (v2.81.0+)
+```
+
+Note: Releases created with v2.93.0+ are immutable — JSON output includes an
+`isImmutable` field. Use `gh release download <tag>` (no auth for public repos,
+v2.96.0+) to fetch artifacts.
 
 ## Recent commands worth knowing
 
 - `gh pr revert <n>` — open a revert PR (`--draft`, `--title`, `--body-file`).
 - `gh pr update-branch <n>` — sync PR branch from base (`--rebase`).
+- `gh pr checkout <n>` — alias `gh co` (v2.81.0+).
 - `gh pr create --fill-first` — use only the first commit's message as body (vs `--fill` which uses all commits, `--fill-verbose` which uses all commit msg+bodies).
 - `gh pr create --dry-run` — preview without creating.
 - `gh pr create --recover <token>` — recover from a crashed create session.
+- `gh pr diff --exclude <pattern>` — exclude specific file paths from diff (v2.88.0+). Useful for filtering out generated files or vendor dirs.
+- `gh repo clone --no-upstream` — clone without adding a remote named `upstream` (v2.88.0+).
+- `gh repo edit --squash-merge-commit-message <message>` — set the default message for `--squash` merges (v2.88.0+).
+- `gh browse --blame` — open GitHub's blame view for the current file (v2.88.0+).
+- `gh browse --actions` — open the Actions tab (v2.85.0+).
 - `gh run watch <id> --exit-status` — block until run finishes, exit non-zero on
-  failure. `--compact` shows only failed/relevant steps. Fine-grained PATs lack
-  `checks:read` — use `GITHUB_TOKEN` in Actions or a classic PAT.
+  failure. `--compact` (v2.74.0+) shows only failed/relevant steps. Fine-grained
+  PATs lack `checks:read` — use `GITHUB_TOKEN` in Actions or a classic PAT.
+- `gh run cancel <id> --force` — immediately cancel without waiting for in-progress steps (v2.78.0+).
 - `gh run rerun <id> --failed` — rerun only failed jobs.
 - `gh attestation verify|download file.bin -R owner/repo` — Sigstore supply-chain.
 - `gh release download <tag>` — no auth needed on public repos (v2.96+).
+- `gh telemetry` — view and manage telemetry opt-out (v2.91.0+). Set `GH_TELEMETRY=0` to disable.
 - `gh skill` — see the Agent Skills section above and the `gh-skill` skill for the full workflow.
 - `--json` with NO value: `gh pr list --json` prints all available JSON field names — use this to discover fields before querying. Works on all list/view commands.
 
@@ -421,17 +490,21 @@ Most common commands agents need:
 gh issue create --type Bug --title "..." --body "..."
 gh issue list --type Bug --assignee @me -L 20 --json number,title,state,issueType
 gh issue close <n> --duplicate-of <n>
+gh issue edit <n> --add-assignee @copilot
 
 # PRs
 gh pr list --state open --label bug -L 20 --json number,title,state,headRefName
 gh pr view <n> --json state,mergeable,reviewDecision,statusCheckRollup
 gh pr create --fill --base main
 gh pr create --title "Fix X" --body "Closes #12" --base main
+gh pr create --reviewer @copilot --fill
 gh pr diff <n>
+gh pr diff <n> --exclude '*.generated.*'
 gh pr merge <n> --squash --delete-branch
 gh pr revert <n>
 gh pr checks <n>
 gh pr ready <n>
+gh co <n>                             # shorthand for gh pr checkout (v2.81.0+)
 
 # Discussions (v2.94.0 preview)
 gh discussion list --state open --json number,title,category
@@ -441,24 +514,34 @@ gh discussion comment <n> --body "..."
 # Actions
 gh run list --workflow ci.yml --branch main --limit 20
 gh run view <id> --log-failed          # failed-step logs only (--log for full; the two are mutually exclusive)
-gh run watch <id> --exit-status
+gh run watch <id> --exit-status --compact
+gh run cancel <id> --force
 gh run rerun <id> --failed
 
 # Releases
 gh release create v1.2.0 --generate-notes
 gh release download <tag>                                   # no auth for public repos
+gh release verify -R owner/repo                             # verify latest release attestation
 
 # Search
 gh search prs --author @me --state open --label bug --repo OWNER/REPO
 gh search issues --repo OWNER/REPO --search "error in:title"
 gh search repos --language go --stars ">5000"
 
+# Copilot & agent tasks
+gh copilot "explain this error"
+gh agent-task create --title "Fix login" --body "..."
+gh agent-task list --json state,title
+
 # Skills & file reading
-gh skill list --json name,description
+gh skill search <query> --agent opencode
 gh skill install owner/repo --agent opencode
+gh skill update <skill-id>
 gh repo read-file README.md --repo cli/cli
+gh repo read-dir script --repo cli/cli
 
 # Auth & config
 gh config set git_protocol ssh
 gh auth status --json
+gh telemetry                                     # view telemetry status (v2.91.0+)
 ```

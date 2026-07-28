@@ -49,6 +49,22 @@ public API/wire contract. These are where a missed finding costs the most.
 Abbreviated is the default — it costs ~an order of magnitude fewer tokens.
 State which path you took, the effective size, and any stakes trigger in one line.
 
+## Entropy scan (before dimension review)
+
+Before diving into dimensions, run a quick entropy scan on the diff — a 30-second
+pass that catches mechanical issues dimensions miss:
+
+- **Duplicates:** Any block of code (6+ lines) that appears verbatim in 2+ places
+  within the diff? Flag as potential copy-paste.
+- **Pattern drift:** Does this change follow the same patterns as adjacent code
+  (naming, error-handling style, file structure)? Flag deviations.
+- **Naming mismatch:** Do new identifiers use consistent terminology with the
+  rest of the file? Flag synonyms used for the same concept.
+- **Dead imports:** Any new import that has no usage in the added code? Flag.
+
+Report entropy findings in a single block before the dimension review. Keep it
+fast — this is a scan, not a deep analysis.
+
 ## Review dimensions
 
 Cover every dimension that the diff actually touches. Skip dimensions with no
@@ -231,6 +247,20 @@ pipeline.)
 On iterations 2+, prepend a `## Prior Findings` block listing findings from the
 previous pass (with their IDs). Do NOT re-report a prior finding unless it is
 a REGRESSION (was fixed in the interim, now broken again).
+
+### Convergence check (for review→fix loops)
+
+When running a review→fix loop, stop when one of these conditions is true:
+
+- **Clean:** No critical or major findings remain
+- **Plateau:** Same finding appears twice despite fixes — the fix approach is
+  wrong; pause and re-assess
+- **Diminishing returns:** Only minor/nit findings remain after 3 iterations —
+  surface to user and stop
+- **Hard cap:** 5 iterations maximum — force-stop and report
+
+Track iteration count and severity count at each round. Report:
+`Round N: critical=X, major=Y, minor=Z, nit=W. Next action: [continue|stop|re-assess]`
 
 ## Posting to a PR
 

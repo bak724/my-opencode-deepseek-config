@@ -1,6 +1,6 @@
 ---
 name: opencode-config
-description: Author and modify OpenCode configuration in this repository — opencode.json keys, agent/*.md frontmatter, skills/*/SKILL.md format, commands, and permissions. Use when editing opencode.json, adding or changing an agent, writing a skill or command, adjusting model routing/permissions, or the task mentions "opencode config", "agent prompt", "SKILL.md", "command", or "permission".
+description: Author and modify OpenCode configuration in this repository — opencode.json keys, agents/*.md frontmatter, skills/*/SKILL.md format, commands, and permissions. Use when editing opencode.json, adding or changing an agent, writing a skill or command, adjusting model routing/permissions, or the task mentions "opencode config", "agent prompt", "SKILL.md", "command", or "permission".
 license: MIT
 compatibility: opencode
 metadata:
@@ -35,10 +35,10 @@ referenced by `opencode.json`'s `$schema`) before adding a new key.
 | --- | --- |
 | `opencode.json` | Global config: model, permissions, plugins, agents (built-in overrides), commands, compaction |
 | `AGENTS.md` | Global rules auto-loaded into every agent's context |
-| `agent/<name>.md` | One custom agent per file (frontmatter + system prompt) |
+| `agents/<name>.md` | One custom agent per file (frontmatter + system prompt) |
 | `skills/<name>/SKILL.md` | On-demand skills, auto-discovered when this repo is the global config dir |
 
-## Agent file format (`agent/<name>.md`)
+## Agent file format (`agents/<name>.md`)
 
 Frontmatter keys in use here (keep them consistent):
 

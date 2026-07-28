@@ -91,6 +91,9 @@ Create `openspec/changes/<change-id>/` with a proposal, tasks, delta specs, and
 Affected code, APIs, dependencies, or systems.
 ```
 
+Include a `## Updates` section at the bottom of `proposal.md` (initially empty)
+in the template above to track future revisions.
+
 **tasks.md** — the apply step parses `- [ ]` checkboxes, so follow this exactly:
 
 ```markdown
@@ -157,13 +160,26 @@ Comment Discipline, Self-Verification, and run any available build/tests.
 
 ## Action: update
 
-Revise the planning artifacts of an in-flight change **in place** — without
-touching implementation. Use it when scope shifts, a requirement is clarified, or
-review feedback lands: edit `proposal.md`/`design.md`/`tasks.md`/delta specs to
-match reality, keep task ids stable where possible, and note what moved. This is
-the `update` action — the disciplined form of the "jump back
-and edit an earlier artifact" philosophy above — prefer it over silently
-diverging from a stale plan. Re-run `apply` once the artifacts are current.
+Revise an existing proposal in-place when the user wants to modify an
+already-proposed change that has not yet been archived:
+
+1. Read `openspec/changes/<change-id>/proposal.md`, `design.md` (if it exists),
+   and `tasks.md`.
+2. Understand the requested update — what should change and why.
+3. Mark tasks that are affected by the update as `[ ]` (unchecked) if they were
+   already completed.
+4. Add new tasks for the requested change.
+5. Update the delta specs to reflect the new scope.
+6. Annotate changes in `proposal.md` with a brief "Updated: YYYY-MM-DD — [reason]"
+   entry in the `## Updates` section.
+7. Report what was changed and what tasks need re-execution.
+
+**Decision framework — update in-place vs. new proposal:**
+
+- **Update in-place** when: scope grows <30%, same core feature, not yet
+  archived.
+- **Create new proposal** when: scope grows 30%+, fundamentally different
+  direction, already archived, or conflicts with the original design.
 
 ## Action: verify (before archive)
 
@@ -185,24 +201,6 @@ needs an artifact update), **SUGGESTION** (untracked improvements worth noting).
 
 Do not block archive for WARNING/SUGGESTION — just surface them so the human can
 decide. CRITICAL means archive is not safe yet.
-
-## Action: update vs new — decision framework
-
-When you already have an in-flight change and scope shifts, decide: update the
-existing change or create a new one?
-
-**Update the existing change when:**
-- The intent is the same (same problem, same goal), only the approach changed
-- Over 50% of the scope overlaps with the current change
-- The current change cannot be considered "done" independently
-
-**Create a new change when:**
-- The intent has fundamentally changed (different problem, different goal)
-- The scope has exploded beyond the original proposal (3x+ tasks)
-- The current change could be archived as-is and stand on its own
-
-Think of it like git branches: same feature → continue committing; new feature →
-new branch.
 
 ## Action: archive
 
