@@ -224,6 +224,6 @@ docs for full details — this section is a quick orientation only.
 bootstrap auto-injects into every session and enforces skill-first discipline:
 invoke the relevant skill before any response.
 
-**DCP (opencode-dcp v3.1.14)** — Autonomous context pruning and deduplication
+**DCP (opencode-dcp, pinned at v3.1.14)** — Autonomous context pruning and deduplication
 for the orchestrator. Compress when a task phase closes; subagent results
 survive pruning. Configured in `~/.config/opencode/dcp.jsonc`.
