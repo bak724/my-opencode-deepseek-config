@@ -52,7 +52,7 @@
     "summaryBuffer": true,
 
     // 上下文阈值（DeepSeek V4 128K 窗口调优）：
-    // 85K 开始强力推压缩（留 43K 缓冲供新内容 + 摘要）
+    // 75K 开始强力推压缩（留 53K 缓冲供新内容 + 摘要）
     "maxContextLimit": 75000,
     // 35K 开始温和提醒模型可压缩（提前感知上下文压力）
     "minContextLimit": 35000,

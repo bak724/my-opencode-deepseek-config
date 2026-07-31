@@ -33,7 +33,7 @@ referenced by `opencode.json`'s `$schema`) before adding a new key.
 
 | Path | Role |
 | --- | --- |
-| `opencode.json` | Global config: model, permissions, plugins, agents (built-in overrides), commands, compaction |
+| `opencode.jsonc` | Global config: model, permissions, plugins, agents (built-in overrides), commands, compaction |
 | `AGENTS.md` | Global rules auto-loaded into every agent's context |
 | `agents/<name>.md` | One custom agent per file (frontmatter + system prompt) |
 | `skills/<name>/SKILL.md` | On-demand skills, auto-discovered when this repo is the global config dir |

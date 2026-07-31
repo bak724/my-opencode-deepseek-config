@@ -10,7 +10,7 @@
 - 模型隔离：`enabled_providers: ["deepseek"]` + `disabled_providers` 双重锁
 - 会话分享：关闭（`share: "disabled"`）；快照：开启（`snapshot: true`）
 - 权限基线：默认放行，破坏性 bash 命令设为 `ask`；`.env` 类敏感文件 `deny`；外部目录 `ask`
-- 上下文压缩：DCP 主动压缩（45K-85K 阈值）+ OpenCode 原生 compaction 兜底
+- 上下文压缩：DCP 主动压缩（35K-75K 阈值）+ OpenCode 原生 compaction 兜底
 - 全局规则：`AGENTS.md`（核心原则、任务拒绝契约、Token 效率、证据纪律、反模式等）
 - 技能：`skills/` 目录下 **18 个** `SKILL.md` 技能，通过原生 `skill` 工具按需加载
 - 插件：`superpowers`（14 个过程型技能）、`@tarquinen/opencode-dcp`（智能上下文裁剪）
@@ -253,6 +253,7 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 │   ├── handoff/SKILL.md        ← 会话压缩为交接文档
 │   └── diagnose/SKILL.md       ← 6 阶段结构化调试
 ├── AGENTS.md                   ← 全局规则（229 行），所有 Agent 共享
+├── LICENSE
 ├── opencode.jsonc
 ├── dcp.jsonc
 └── README.md
