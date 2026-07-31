@@ -1,0 +1,15 @@
+# Code-review severity calibration.
+# When a review agent finds a pattern listed here, it MUST downgrade the
+# severity as specified and cite the calibration entry.
+#
+# This file: keep local (gitignored). Team-shared entries go in
+# .ai/calibration.yml tracked in git.
+
+calibrations: []
+# Example entries:
+#   - pattern: "missing authentication on localhost-only internal tool"
+#     downgrade: "high -> low"
+#     reason: "internal use only, no external exposure"
+#   - pattern: "console.log in CLI tool"
+#     downgrade: "major -> minor"
+#     reason: "CLI output is intentional user-facing logging"
