@@ -10,12 +10,9 @@ metadata:
 
 # Code Review
 
-A structured, token-frugal review discipline. It borrows the strengths of
-multi-agent review pipelines (dimension coverage, severity calibration,
-review→fix loops) **without** their weight: one reviewer pass covers all
-dimensions, depth scales to diff size, and large reviews communicate through
-files instead of context. Pair with the `security-review` skill when the diff
-touches a trust boundary.
+A structured, token-frugal review discipline: one pass covers all dimensions,
+depth scales to diff size, and large reviews communicate through files instead
+of context. Pair with `security-review` when the diff touches a trust boundary.
 
 ## Step 0 — Scope by *effective* size, not raw lines
 
@@ -49,10 +46,41 @@ public API/wire contract. These are where a missed finding costs the most.
 Abbreviated is the default — it costs ~an order of magnitude fewer tokens.
 State which path you took, the effective size, and any stakes trigger in one line.
 
+## Dual-Axis Review (two parallel passes)
+
+For standard and full reviews, dispatch TWO parallel sub-review passes:
+
+1. **Standards axis** — style, naming, structure, comments, imports, error
+   handling. Check against AGENTS.md Anti-Patterns and Code Style rules.
+2. **Spec axis** — correctness, boundary conditions, security, performance.
+   Check against the stated task/feature requirements.
+
+Run both passes concurrently. After both complete, merge their findings:
+deduplicate (same issue found by both), sort by severity, produce a single
+report with the axis source tagged on each finding.
+
+### Standards Axis Checklist (inline — pass with task dispatch)
+
+Check every changed file against:
+- [ ] Style: const/let usage, early returns, functional array methods
+- [ ] Naming: no catch-all files, descriptive filenames, no import aliases
+- [ ] Structure: no wildcard imports, no commented-out code, no empty catch
+- [ ] Comments: why not what, no AI filler words, no emoji
+- [ ] Imports: named imports only, no unused imports, no alias
+- [ ] Error handling: no empty catch, no @ts-ignore without comment
+
+### Spec Axis Checklist (inline — pass with task dispatch)
+
+Check every changed function/logic path against:
+- [ ] Correctness: Does it do what the requirements say?
+- [ ] Boundaries: null/undefined, empty arrays, zero values, max values
+- [ ] Security: injection, auth, secrets, path traversal, deserialization
+- [ ] Performance: N+1 queries, unnecessary loops, large allocations
+- [ ] Concurrency: race conditions, shared mutable state (if applicable)
+
 ## Entropy scan (before dimension review)
 
-Before diving into dimensions, run a quick entropy scan on the diff — a 30-second
-pass that catches mechanical issues dimensions miss:
+A quick scan for mechanical issues:
 
 - **Duplicates:** Any block of code (6+ lines) that appears verbatim in 2+ places
   within the diff? Flag as potential copy-paste.
@@ -62,8 +90,7 @@ pass that catches mechanical issues dimensions miss:
   rest of the file? Flag synonyms used for the same concept.
 - **Dead imports:** Any new import that has no usage in the added code? Flag.
 
-Report entropy findings in a single block before the dimension review. Keep it
-fast — this is a scan, not a deep analysis.
+Report entropy findings in a single block before dimensions.
 
 ## Review dimensions
 
@@ -71,52 +98,40 @@ Cover every dimension that the diff actually touches. Skip dimensions with no
 relevant changes rather than padding the report.
 
 1. **Correctness** — logic bugs, off-by-one, null/undefined, unhandled edge
-   cases, error paths, incorrect assumptions about callers.
+   cases, error paths.
 2. **Security** — injection, XSS, authz/authn gaps, secrets, path traversal,
-   SSRF, unsafe deserialization. If any apply, load the `security-review` skill
-   for the full checklist and reporting format.
-3. **Performance** — N+1 queries, unbounded loops/allocations, blocking calls on
-   hot paths, missing pagination/timeouts, leaks.
-4. **Architecture** — inappropriate coupling, leaky abstractions, responsibility
-   in the wrong layer, needless complexity.
+   SSRF, unsafe deserialization. Load `security-review` skill if any apply.
+3. **Performance** — N+1 queries, unbounded loops/allocations, blocking calls
+   on hot paths, missing pagination/timeouts, leaks.
+4. **Architecture** — inappropriate coupling, leaky abstractions, wrong-layer
+   responsibility, needless complexity.
 5. **Maintainability** — naming, function size, magic numbers, dead code,
-   duplicated logic, convention drift from the surrounding codebase.
-6. **Docs & comments** — AI-boilerplate comments that restate code, commented-out
-   code, comments explaining WHAT not WHY, stale doc/README claims. Enforce
-   AGENTS.md Comment Discipline.
+   duplicated logic, convention drift.
+6. **Docs & comments** — Enforce AGENTS.md Comment Discipline and Anti-Patterns
+   (commented-out code, AI boilerplate, stale docs).
 7. **Compatibility** — breaking API/signature changes, altered public contracts,
    changed defaults, DB/schema migrations, callers left unupdated.
 
-Before reporting, verify silently: read every changed file end-to-end; check for
-unused imports, leftover TODOs, and debug prints; confirm new/changed functions
-have callers.
+Before reporting, silently verify: read every changed file end-to-end; check
+unused imports, leftover TODOs, debug prints; confirm new functions have callers.
 
 ## Severity levels
 
-- **critical** — data loss, security hole, crash, or broken core behavior. Must
-  fix before merge.
+- **critical** — data loss, security hole, crash, or broken core behavior. Must fix.
 - **major** — real bug or regression under plausible input; wrong results.
 - **minor** — narrow-impact bug, weak error handling, notable smell.
 - **nit** — style/naming/comment polish. Report only if it compounds into a
   maintainability problem; otherwise omit.
 
-## Project Context Calibration
-
-Before assigning severity, check: project version stage (`package.json` version
-— v0.x → lower API stability severity), deployment model (localhost → downgrade
-auth/network findings), repo visibility (private → downgrade secret exposure to
-warning).
-
 ## Severity calibration (fight inflation)
 
-Judge impact in context, not by pattern-matching a rule. A finding's severity
-depends on the project's actual threat model and conventions:
+Judge impact in context against the project's actual threat model and conventions.
+Read `package.json` or equivalent to detect project stage (v0.x vs v1+), deployment
+model (localhost tool? public service? internal tool? library?), and repo visibility.
 
-- Read `AGENTS.md` (and `CLAUDE.md` if present) for stated context, threat model,
-  and conventions before assigning severity.
-- **Calibrate to project context**: Read `package.json` or equivalent to detect
-  project stage (v0.x vs v1+), deployment model (localhost tool? public service?
-  internal tool? library?), and existing conventions. Apply these heuristics:
+- Read AGENTS.md (and CLAUDE.md if present) for stated context, threat model, and
+  conventions before assigning severity.
+- Apply these heuristics:
   - **v0.x projects**: API stability/compatibility findings → minor at most
     (semver expects breaking changes).
   - **Localhost-only tools**: auth/network attack surface → minor (documented
@@ -125,22 +140,24 @@ depends on the project's actual threat model and conventions:
   - **v1+ public libraries**: API breaks, unvalidated input → critical/major.
 - Down-rank findings that don't apply to this project's reality. Note the
   calibration reason.
-- Prefer one accurate high-severity finding over ten inflated ones. Every false
-  alarm the reader dismisses erodes trust in the whole review.
-- If you notice a systematic mismatch (a whole category consistently doesn't
-  apply here), say so once and suggest the user record it in `AGENTS.md` — that
-  is the durable, token-free equivalent of a calibration file.
+- Prefer one accurate high-severity finding over ten inflated ones — every false
+  alarm erodes trust.
+- If a whole category consistently doesn't apply here, say so once and suggest
+  recording it in AGENTS.md.
 
 ### Suppress known-design noise
 
-If the caller supplies a decisions/context note — inline ("we chose X on
-purpose"), a path like `.opencode/decisions.md`, or documented constraints in
-`AGENTS.md`/`CLAUDE.md` — treat those choices as **intentional** and do not flag
-them as findings. Surface them only if the diff itself makes the documented
-choice concretely unsafe (e.g. a decision that assumed trusted input is now
-reachable from an untrusted path). This is the token-free equivalent of
-deepreview's `--context` suppression: it kills the biggest source of review
-noise — re-litigating settled design.
+Treat documented decisions (from caller's context note, `.opencode/decisions.md`,
+or `AGENTS.md`/`CLAUDE.md`) as intentional. Flag only when the diff makes a
+documented choice concretely unsafe (e.g. trusted-input assumption now reachable
+from an untrusted path).
+
+## Calibration
+
+Before assigning severity, read `.ai/calibration.yml` if it exists. For any
+finding whose pattern matches a calibration entry, apply the specified
+downgrade and cite the entry in the report. This prevents the same
+low-priority finding from being flagged as high in every review.
 
 ## Self-skepticism check (before output)
 
@@ -288,27 +305,19 @@ Place each finding at the tightest scope its location allows (3-tier placement):
 3. **Review body** — the finding is about a file not in the diff at all
    (cross-cutting or blast-radius concerns).
 
-This keeps comments anchored to the diff and avoids GitHub rejecting line
-comments that fall outside the PR's changed ranges.
+This keeps comments anchored to the diff. Triage: lines within diff hunks → line
+comment; lines in diff files but outside changed blocks → file comment; files
+not in the diff → review body only.
 
-Triage: lines within diff hunks → line comment; lines in diff files but outside
-changed blocks → file comment; files not in the diff → review body only.
-
-**Re-reviewing the same PR (avoid duplicate comments):** embed a short stable
-finding id (e.g. `<!-- cr:auth-nullcheck-L42 -->`) in each comment body. On a
-later pass, list existing review comments (`gh pr view <n> --json comments` or
-`gh api`), match by id, and **update in place** instead of re-posting — add only
-genuinely new findings, and resolve/note ones the diff has since fixed. This is
-deepreview's finding-id dedup, minus its pipeline: it keeps loop-mode reviews
-from spamming the PR with repeats.
+**Re-review dedup:** embed a stable finding id (`<!-- cr:auth-nullcheck-L42 -->`)
+in each comment body. On later passes, list existing review comments (`gh pr view
+<n> --json comments` or `gh api`), match by id, and update in place. Add only new
+findings; resolve or note ones the diff has since fixed.
 
 ## Rules
 
-- Report findings as text; **do not modify code** unless the task explicitly asks
-  to fix (loop mode). Read-only agents never edit regardless.
-- Review the **diff and its immediate blast radius** first; widen only when a
-  finding points elsewhere.
-- Follow AGENTS.md — Quality Bar and Comment Discipline in particular.
-- Cite concrete `file:line` locations. "Line 42 is off-by-one because…" beats
-  "this looks wrong".
-- Honest assessment only — never performatively positive, never inflated.
+- Report findings; do not modify code unless in loop mode.
+- Review the diff and blast radius first; widen only when needed.
+- Follow AGENTS.md quality and comment rules.
+- Cite concrete `file:line` locations.
+- No performative positivity or inflated severity.
