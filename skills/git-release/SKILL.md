@@ -12,7 +12,7 @@ metadata:
 
 Turn a set of merged changes into a clean, tagged release: collect what
 changed, pick the right version, and produce the exact commands to cut it.
-Pairs well with the `gh-cli` and `conventional-commits` skills.
+Pairs well with the `gh-cli` skill.
 
 ## What I do
 

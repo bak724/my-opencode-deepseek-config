@@ -224,7 +224,7 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 | **v16-v18（高效执行）** | 移除神话名称、合并路由表、gh-cli 扩至 Issues 2.0、spec-workflow 增加 verify + 决策框架 |
 | **v19（对齐上游）** | 复核 6 个上游仓库；修正 `/review-pr` 逐行评论 Bug；code-review 路由从裸行数改为有效逻辑体量 |
 | **v20（重构优化）** | `agent/`→`agents/` 对齐 OpenCode 推荐；AGENTS.md 精简 22%（292→229 行）；新增 `diagnose`（6 阶段调试）+ `handoff`（会话交接）技能；spec-workflow 增加 `/update`；code-review 增加熵扫描+收敛检查；agent prompt 去重 20% |
-| **v21（全面瘦身重构）** | 技能 18→17（移除 deepwork/conventional-commits/diagnose，新增 writing-great-skills/shared-language）；命令 29→18（-38%）；AGENTS.md 212 行（-7%）；技能总行数 -24%。code-review 双轴并行 + 校准文件机制。借鉴 pi/deepreview/mattpocock 等 6 个仓库实战经验。 |
+| **v21（全面瘦身重构）** | 技能 18→17（移除 deepwork/conventional-commits/diagnose，新增 writing-great-skills/shared-language）；命令 29→18（-38%）；AGENTS.md 227→212 行（-7%）；技能逐句 no-op 修剪。code-review 双轴并行 + 校准文件机制。借鉴 pi/deepreview/mattpocock 等 6 个仓库实战经验。 |
 
 ## 仓库结构
 
