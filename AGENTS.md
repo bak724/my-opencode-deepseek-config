@@ -55,6 +55,16 @@ For any task with 2 or more steps:
 Skipping todos on multi-step work means invisible progress and risks leaving the
 task half-done.
 
+## Git Safety
+
+- Only stage and commit files you modified in this session. Never `git add -A`,
+  `git reset --hard`, `git checkout .`, or `git clean -fd` — those discard
+  work from other sessions or tools that may share the same working directory.
+- Before committing: inspect `git status`, `git diff --staged`, and
+  `git log --oneline -10`. Stage only intended files.
+- Never force-push, skip hooks (`--no-verify`), or amend commits without
+  explicit user request.
+
 ## Context Management
 
 - **Delegate, don't accumulate.** Large files should be read by subagents, not
@@ -65,10 +75,7 @@ task half-done.
   it. Carry forward the plan and findings, not the raw exploration transcript.
 - **One topic per subagent.** Don't ask a single subagent to do research AND
   implementation — split them.
-- **Cache-aware prompting.** Prefer stable, prefix-matched prompt structures so
-  OpenCode's cache can reuse compute across sessions.
-- **Consider the handoff skill** when handing a long session to a fresh agent —
-  it compresses to references rather than copying full context.
+
 
 ## Token Efficiency
 
@@ -164,15 +171,11 @@ These are unconditionally forbidden:
 
 ## Code Style (when implementing)
 
-- **Prefer `const` over `let`.** Use ternary expressions or early returns instead of reassignment.
-- **Avoid `else` when possible.** Use early returns — they flatten the code and reduce cognitive load.
-- **Avoid `try`/`catch` where feasible.** Use explicit error handling or result types over blanket exception wrapping.
-- **Prefer functional array methods** (`flatMap`, `filter`, `map`) over imperative `for` loops for data transformation.
-- **Reduce variable count.** If a value is used only once, inline it at the use site instead of creating a named variable.
-- **Avoid unnecessary destructuring.** Use dot notation (`obj.prop`) when the destructured name doesn't clarify intent.
-- **No import aliases** (`import { foo as bar }`) unless disambiguating a genuine collision.
-- **No wildcard imports** (`import * as Foo`) — prefer named imports.
-- **Keep functions together.** Don't prematurely extract single-use helper functions — they scatter logic without adding clarity.
+- **Prefer `const` over `let`.** Early return instead of `else`.
+- **Prefer functional array methods** (`flatMap`, `filter`, `map`) over imperative loops.
+- **No import aliases** unless disambiguating a collision; no wildcard imports (`import * as`).
+- **Inline single-use values.** Don't create a variable for a value used exactly once.
+- **No catch-all files** (`utils.ts`, `helpers.ts`).
 
 ## Skills
 
@@ -182,37 +185,17 @@ reinventing a workflow, check whether a skill covers it. The `superpowers`
 plugin provides additional process-oriented skills (brainstorming, systematic
 debugging, TDD, etc.) — prefer these before falling back to raw reasoning.
 
-## Self-Verification
-
-For non-trivial changes, load the `verification-before-completion` skill first
-to choose the narrowest verification path.
-
-**Plan verification before implementing.** When you know what you'll change,
-pre-state the verification steps: which tests to run, which callers to check,
-which edge cases to validate. Write them down before writing code — then run
-them after. Verification without a plan is half-hearted.
+## Verification & Evidence
 
 Before claiming any task is complete:
-1. Re-read every modified file from top to bottom — scan for leftover debug
-   prints, TODO comments, incomplete logic
-2. Verify the change doesn't break callers — grep for usages of modified
-   functions/types
-3. If the project has tests, run them; if not, state that tests were not available
-4. Check that you haven't introduced unused imports, variables, or parameters
+1. Re-read every modified file end-to-end — scan for leftover debug prints,
+   TODOs, incomplete logic.
+2. Verify changes don't break callers — grep for usages of modified functions.
+3. If tests exist, run them. If not, state what manual verification you performed.
 
-## Evidence Discipline
-
-Never claim "done" without proof. Before reporting completion, produce at least
-one verifiable piece of evidence that the task was actually accomplished:
-
-- A test that passes, a build that succeeds, a lint check that's clean
-- An end-to-end read of every modified file confirming correctness
-- A grep result showing no broken callers
-- If no automated checks exist, state explicitly what manual verification you
-  performed and what you observed
-
-Evidence precedes assertion. If you cannot produce evidence, you are not done —
-state what remains and what blocker prevents verification.
+Never claim "done" without evidence: a passing build, a clean lint check,
+an end-to-end read, or a grep showing no broken callers. Evidence precedes
+assertion.
 
 ## Plugins
 
