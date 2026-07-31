@@ -10,14 +10,8 @@ metadata:
 
 # Verify With Docs (Retrieval-First)
 
-Your training data has a cutoff and libraries move fast. Guessing an API from
-memory is cheap to write and expensive to debug — a single hallucinated
-signature can cost more than a whole afternoon of lookups. So for any code that
+Your training data has a cutoff and libraries move fast, so for any code that
 touches a specific dependency, **retrieve before you write.**
-
-Adapted (pure prompt, no external tooling) from the retrieval-first pattern in
-anomalyco/opencode's `effect` and `agents-sdk` skills: *"Your knowledge of this
-library may be outdated. Prefer retrieval over pre-training."*
 
 ## When this applies
 
@@ -31,6 +25,16 @@ Reach for this skill when the task:
 
 Skip it for stable stdlib usage you are certain of, or pure logic with no
 external API surface.
+
+## References Local-First
+
+Before fetching from the web, check if the target library is available as a
+local reference in `opencode.jsonc` → `references`. If mounted (e.g., via
+`references: { "opencode": { "repository": "anomalyco/opencode" } }`), read
+the source code from the local clone first. Only fall back to web fetch if:
+- The reference is outdated (commit older than the version in use)
+- The reference does not cover the relevant code paths
+- No reference is mounted for the target library
 
 ## The loop
 

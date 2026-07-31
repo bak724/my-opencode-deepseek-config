@@ -20,8 +20,7 @@ require the `@fission-ai/openspec` npm package, only the conventions below.
 - **Enablers, not gates.** Artifact dependencies (proposal → specs → design → tasks)
   show what's possible next, not what you MUST do. You can always jump back and
   edit an earlier artifact — discovered the design is wrong mid-implementation?
-  Update `design.md` and keep going. The artifacts serve you, not the other way
-  around.
+  Update `design.md` and keep going.
 - **Fluid, not rigid.** These are actions you take anytime — not locked phases.
   Implement, discover the design was wrong, update the spec, keep going.
 - **Artifacts are the source of truth.** Plans live as markdown files in the
@@ -111,7 +110,7 @@ Order tasks by dependency; each should fit in one session and be verifiable.
 architectural pattern, new dependency, significant data-model change, or
 security/performance/migration complexity. Sections: Context · Goals/Non-Goals ·
 Decisions (with alternatives considered) · Risks/Trade-offs · Migration Plan ·
-Open Questions. Focus on architecture, not line-by-line code.
+Open Questions.
 
 **Open Questions** — problems the design intentionally defers. Each entry names
 what is unknown, why it can wait, and what would trigger revisiting it. If an
@@ -155,8 +154,7 @@ The system SHALL allow users to export their data as CSV.
 Read the proposal, design, and specs for the change, then work through
 `tasks.md`: pick the next unchecked task, implement it, mark it `- [x]`, repeat.
 Pause and ask if you hit a blocker or the design proves wrong (update the
-artifacts rather than silently diverging). Follow AGENTS.md — minimal changes,
-Comment Discipline, Self-Verification, and run any available build/tests.
+artifacts rather than silently diverging).
 
 ## Action: update
 
@@ -174,12 +172,20 @@ already-proposed change that has not yet been archived:
    entry in the `## Updates` section.
 7. Report what was changed and what tasks need re-execution.
 
-**Decision framework — update in-place vs. new proposal:**
+## Update vs New Change Heuristic
 
-- **Update in-place** when: scope grows <30%, same core feature, not yet
-  archived.
-- **Create new proposal** when: scope grows 30%+, fundamentally different
-  direction, already archived, or conflicts with the original design.
+When asked to update an existing change, apply this test before modifying
+the artifacts:
+
+- **Update** the existing change when: same intent AND scope overlap >50%
+  (the change addresses substantially the same problem). OR when the
+  existing change cannot realistically be "completed" as-is (wrong
+  direction, stale assumptions).
+
+- **Create a new change** when: the intent has shifted (different problem
+  statement) OR scope has exploded (3x+ original). Think of this like git
+  branches — a small fixup amends the branch; a direction change creates
+  a new branch.
 
 ## Action: verify (before archive)
 
