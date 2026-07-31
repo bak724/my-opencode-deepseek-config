@@ -11,8 +11,6 @@ metadata:
 # Simplify
 
 Improve code readability and reduce cognitive load without altering behavior.
-This is not a general refactor — it's a focused, safety-first simplification
-discipline.
 
 ## Core rule
 

@@ -15,8 +15,6 @@ is simple: **prove it's dead before you delete it.** A confident-looking unused
 symbol is often reached through a barrel export, a test, reflection, or a
 framework entry point. Verify first.
 
-Pure prompt-driven dead code removal — no plugin or team-mode required.
-
 ## Phase 1: Scan (parallel)
 
 Fire independent detectors at once and collect candidates:

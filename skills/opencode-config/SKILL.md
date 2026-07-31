@@ -24,7 +24,7 @@ referenced by `opencode.json`'s `$schema`) before adding a new key.
   `anomalyco/opencode` fork uses different plural keys (`plugins`, `snapshots`);
   this repo uses the singular sst keys (`plugin`, `snapshot`). Don't cross them.
 - This skill is the local equivalent of the upstream built-in `customize-opencode`
-  skill (anomalyco/opencode): load it whenever config is being edited.
+  skill (anomalyco/opencode).
 - The two-model constraint is absolute: only `deepseek/deepseek-v4-pro` and
   `deepseek/deepseek-v4-flash`. Never introduce a third model anywhere.
 - Prefer pure config/prompt changes over new plugins or dependencies.

@@ -88,7 +88,7 @@ git branch recovered HEAD@{5}     # restore a "lost" commit as a new branch
 ```
 
 `git reflog` captures everything — rebases, resets, checkouts, even deleted
-branches (until garbage collection). It's the ultimate undo.
+branches (until garbage collection).
 
 ## Bisect: find the exact commit that broke things
 

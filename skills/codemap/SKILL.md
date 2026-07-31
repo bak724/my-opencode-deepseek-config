@@ -86,9 +86,6 @@ New-Item -ItemType Directory -Force -Path .opencode
 # ... write the annotated tree ...
 ```
 
-Then in subsequent sessions, the orchestrator can check for `.opencode/codemap.md`
-before exploring blindly.
-
 ## Output discipline
 
 - **Keep it concise.** Annotations are one-liners. The whole map should fit in
