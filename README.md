@@ -12,7 +12,7 @@
 - 权限基线：默认放行，破坏性 bash 命令设为 `ask`；`.env` 类敏感文件 `deny`；外部目录 `ask`
 - 上下文压缩：DCP 主动压缩（35K-75K 阈值）+ OpenCode 原生 compaction 兜底
 - 全局规则：`AGENTS.md`（核心原则、任务拒绝契约、Token 效率、证据纪律、反模式等）
-- 技能：`skills/` 目录下 **18 个** `SKILL.md` 技能，通过原生 `skill` 工具按需加载
+- 技能：`skills/` 目录下 **17 个** `SKILL.md` 技能，通过原生 `skill` 工具按需加载
 - 插件：`superpowers`（14 个过程型技能）、`@tarquinen/opencode-dcp`（智能上下文裁剪）
 - 实验功能：`batch_tool` 已默认开启
 
@@ -135,7 +135,7 @@ opencode
 | `planner` | v4-pro | 读写 | 规划、架构、拆解任务 |
 | `deep-worker` | v4-pro | 读写 | 重型实现、多文件改动、复杂调试 |
 | `oracle` | v4-pro | **只读** | 根因分析、深度理解代码 |
-| `reviewer` | v4-pro | **只读** | 代码审查、质量检查 |
+| `reviewer` | v4-pro | **只读** | 双轴代码审查（规范 + 规约）+ 严重度校准 |
 | `ui-builder` | v4-pro | 读写 | 前端与 UI 相关任务 |
 | `consultant` | v4-pro | 读写 | 方案讨论、最佳实践建议 |
 | `explore` | v4-flash | **只读** | 代码库搜索、并行探索 |
@@ -146,35 +146,43 @@ opencode
 
 ## 快捷命令
 
-| 命令 | 对应 Agent | 用途 |
+### Agent 路由命令
+
+| 命令 | Agent | 用途 |
 | --- | --- | --- |
-| `/deep` | `deep-worker` | 重型实现 |
-| `/deepwork` | `deep-worker`（deepwork） | 审查门控分阶段执行 |
-| `/quick` | `light-orchestrator` | 快速处理简单任务 |
+| `/deep` | `deep-worker` | 重型实现、多文件改动 |
+| `/quick` | `light-orchestrator` | 轻量任务、单文件编辑 |
 | `/ui` | `ui-builder` | 前端/UI 工作 |
-| `/review` | `reviewer`（code-review） | 代码审查，多维度+严重度 |
-| `/review-loop` | `deep-worker`（code-review） | 审查→修复循环，直至干净或 5 轮 |
+| `/review` | `reviewer`（code-review） | 双轴并行审查（规范+规约）+ 严重度校准 |
 | `/review-pr` | `reviewer`（code-review + gh-cli） | 审查 PR 并回帖到 GitHub |
 | `/plan` | `planner` | 制定计划、技术方案 |
 | `/search` | `librarian` | 外部搜索、查文档 |
 | `/oracle` | `oracle` | 深度分析、问题溯源 |
 | `/consult` | `consultant` | 咨询、对比、建议 |
-| `/docs` | `librarian`（verify-with-docs） | 编码前核对 API 文档 |
+
+### 操作命令
+
+| 命令 | Agent | 用途 |
+| --- | --- | --- |
+| `/commit` | `light-orchestrator` | 生成 Conventional Commits 提交信息（内联格式） |
 | `/release` | `deep-worker`（git-release） | 准备 Tag 发布 |
-| `/reflect` | `oracle`（reflect） | 发现摩擦→提出配置优化 |
-| `/commit` | `light-orchestrator`（conventional-commits） | 生成规范提交信息 |
+| `/reflect` | `oracle`（reflect） | 发现摩擦 → 提出配置优化 |
 | `/handoff` | `light-orchestrator`（handoff） | 压缩会话为交接文档 |
-| `/learn` | `light-orchestrator` | 沉淀项目事实到 AGENTS.md |
-| `/rmslop` | `deep-worker`（remove-deadcode） | 清理 AI slop 和死代码 |
-| `/explore` | `explore`（spec-workflow） | 提案前探索 |
-| `/propose` | `planner`（spec-workflow） | 起草变更提案 |
-| `/apply` | `deep-worker`（spec-workflow） | 按 tasks.md 清单实现 |
-| `/update` | `planner`（spec-workflow） | 修订已存在变更提案 |
-| `/archive` | `light-orchestrator`（spec-workflow） | 归档并合并 delta spec |
+
+### 内联命令
+
+| 命令 | Agent | 用途 |
+| --- | --- | --- |
 | `/codemap` | `explore`（codemap） | 生成仓库结构图 |
-| `/simplify` | `oracle`（simplify） | 行为保持的代码简化 |
-| `/skill` | `light-orchestrator`（gh-skill） | 管理 Agent 技能 |
-| `/verify-plan` | `deep-worker`（verification-planning） | 实现前规划验证路径 |
+| `/simplify` | `oracle`（simplify）→ `light-orchestrator` | oracle 分析 → light-orchestrator 应用简化 |
+| `/rmslop` | `deep-worker`（remove-deadcode） | 清理死代码和 AI slop |
+
+### 规约命令
+
+| 命令 | Agent | 用途 |
+| --- | --- | --- |
+| `/spec-propose` | `planner`（spec-workflow） | 探索代码 → 起草变更提案 |
+| `/spec-apply` | `deep-worker`（spec-workflow） | 按 tasks.md 逐一实现 → 自动归档 |
 
 ## 技能（Skills）
 
@@ -182,24 +190,23 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 
 | Skill | 作用 |
 | --- | --- |
-| `gh-cli` | GitHub CLI 全面操作（v2.96+，含 Issues 2.0、copilot、agent-task） |
+| `code-review` | 双轴并行审查（规范 + 规约）+ 严重度校准 |
+| `codemap` | 生成带标注的仓库结构图，节省探索 token |
+| `gh-cli` | GitHub CLI v2.96+ 全面参考（Issues 2.0、copilot、agent-task） |
 | `gh-skill` | 发现、安装、更新、发布 Agent 技能 |
-| `conventional-commits` | 按 Conventional Commits 规范写提交信息 |
-| `security-review` | 合并前对 diff 做安全审查 |
-| `code-review` | Token 高效多维度审查，含熵扫描+收敛检查 |
-| `git-release` | 准备 Tag 发布：SemVer 推断、发布说明 |
-| `remove-deadcode` | 安全查找并删除死代码，删除前 LSP 验证 |
-| `opencode-config` | 编写和维护 OpenCode 配置 |
-| `spec-workflow` | 规约驱动变更工作流（explore→propose→apply→update→archive） |
-| `verify-with-docs` | 编码前核对 API 文档，检索优先 |
-| `git-master` | 高级 Git：rebase、squash、bisect、reflog、worktree |
-| `codemap` | 生成带标注的仓库结构图 |
-| `simplify` | 行为保持的代码简化 |
-| `deepwork` | 审查门控分阶段执行 |
-| `reflect` | 持续改进：发现摩擦→提出最小修复 |
-| `verification-planning` | 实现前规划最窄验证路径 |
+| `git-master` | 高级 Git 操作：rebase、squash、bisect、reflog、worktree |
+| `git-release` | Tag 发布：SemVer 推断、发布说明、gh release 命令 |
 | `handoff` | 压缩会话为交接文档（路径引用，不复制内容） |
-| `diagnose` | 6 阶段结构化调试（复现→最小化→假设→打点→修复→回归） |
+| `opencode-config` | 编写和维护 OpenCode 配置 |
+| `reflect` | 持续改进：发现摩擦 → 提出最小修复 |
+| `remove-deadcode` | 安全查找并删除死代码，删除前 LSP 验证 |
+| `security-review` | 合并前对 diff 做安全审查 |
+| `shared-language` | 构建领域术语表，大幅节省上下文 token |
+| `simplify` | 行为保持的代码简化（oracle 分析 → light-orchestrator 应用） |
+| `spec-workflow` | 轻量规约驱动变更（propose → design → tasks → implement → archive） |
+| `verification-planning` | 实现前规划最窄验证路径 |
+| `verify-with-docs` | 编码前核对 API 文档，检索优先，防止幻觉 |
+| `writing-great-skills` | 技能编写规范：无操作裁剪、正向表述、完成标准 |
 
 ## 设计决策与迭代记录
 
@@ -217,45 +224,46 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 | **v16-v18（高效执行）** | 移除神话名称、合并路由表、gh-cli 扩至 Issues 2.0、spec-workflow 增加 verify + 决策框架 |
 | **v19（对齐上游）** | 复核 6 个上游仓库；修正 `/review-pr` 逐行评论 Bug；code-review 路由从裸行数改为有效逻辑体量 |
 | **v20（重构优化）** | `agent/`→`agents/` 对齐 OpenCode 推荐；AGENTS.md 精简 22%（292→229 行）；新增 `diagnose`（6 阶段调试）+ `handoff`（会话交接）技能；spec-workflow 增加 `/update`；code-review 增加熵扫描+收敛检查；agent prompt 去重 20% |
+| **v21（全面瘦身重构）** | 技能 18→17（移除 deepwork/conventional-commits/diagnose，新增 writing-great-skills/shared-language）；命令 29→18（-38%）；AGENTS.md 212 行（-7%）；技能总行数 -24%。code-review 双轴并行 + 校准文件机制。借鉴 pi/deepreview/mattpocock 等 6 个仓库实战经验。 |
 
 ## 仓库结构
 
 ```text
-.
-├── agents/                     ← 10 个 Agent 系统提示
-│   ├── orchestrator.md         ← 主编排器（意图门控 + 模型感知路由 + 后备链）
-│   ├── planner.md
-│   ├── deep-worker.md          ← 重型实现（禁止研究/委托）
-│   ├── oracle.md
-│   ├── reviewer.md             ← 审查（多维度 + 对抗性自检 + 上下文校准）
-│   ├── consultant.md
-│   ├── ui-builder.md
-│   ├── explore.md
-│   ├── librarian.md
-│   └── light-orchestrator.md  ← 轻量执行（禁止研究/委托）
-├── skills/                     ← 18 个可复用技能，按需加载
-│   ├── gh-cli/SKILL.md         ← GitHub CLI 全面操作（v2.96+）
-│   ├── gh-skill/SKILL.md
-│   ├── code-review/SKILL.md    ← Token 高效多维度审查（含熵扫描+收敛检查）
-│   ├── security-review/SKILL.md
-│   ├── conventional-commits/SKILL.md
-│   ├── git-release/SKILL.md
-│   ├── remove-deadcode/SKILL.md
-│   ├── opencode-config/SKILL.md
-│   ├── spec-workflow/SKILL.md
-│   ├── verify-with-docs/SKILL.md
-│   ├── git-master/SKILL.md
-│   ├── codemap/SKILL.md
-│   ├── simplify/SKILL.md
-│   ├── deepwork/SKILL.md
-│   ├── reflect/SKILL.md
-│   ├── verification-planning/SKILL.md
-│   ├── handoff/SKILL.md        ← 会话压缩为交接文档
-│   └── diagnose/SKILL.md       ← 6 阶段结构化调试
-├── AGENTS.md                   ← 全局规则（229 行），所有 Agent 共享
+├── .ai/
+│   └── calibration.yml           # code-review 严重度校准
+├── agents/                       # 10 个专职 Agent
+│   ├── orchestrator.md           # 主入口：意图门控 + 模型感知路由
+│   ├── planner.md                # pro：架构与规划
+│   ├── deep-worker.md            # pro：重型实现
+│   ├── oracle.md                 # pro：深度代码分析（只读）
+│   ├── reviewer.md               # pro：双轴代码审查（只读）
+│   ├── consultant.md             # pro：方案讨论与建议
+│   ├── ui-builder.md             # pro：前端与 UI
+│   ├── explore.md                # flash：代码库搜索（只读）
+│   ├── librarian.md              # flash：外部检索（只读）
+│   └── light-orchestrator.md     # flash：简单编辑
+├── skills/                       # 17 个按需加载技能
+│   ├── code-review/              # 双轴并行审查 + 严重度校准
+│   ├── codemap/                  # 生成仓库结构图
+│   ├── gh-cli/                   # GitHub CLI v2.96+ 参考
+│   ├── gh-skill/                 # gh skill 管理
+│   ├── git-master/               # 高级 Git 操作
+│   ├── git-release/              # Tag 发布
+│   ├── handoff/                  # 会话压缩为交接文档
+│   ├── opencode-config/          # 元技能：本仓库配置编写
+│   ├── reflect/                  # 持续改进
+│   ├── remove-deadcode/          # 死代码检测与删除
+│   ├── security-review/          # 安全审查清单
+│   ├── shared-language/          # 领域术语表（节省 token）
+│   ├── simplify/                 # 行为保持的代码简化
+│   ├── spec-workflow/            # 规约驱动开发
+│   ├── verification-planning/    # 实现前验证路径规划
+│   ├── verify-with-docs/         # 检索优先 API 验证
+│   └── writing-great-skills/     # 技能编写规范
+├── opencode.jsonc                # 主配置（18 条命令）
+├── AGENTS.md                     # 全局规则（~212 行）
+├── dcp.jsonc                     # DCP 上下文压缩（DeepSeek 128K）
 ├── LICENSE
-├── opencode.jsonc
-├── dcp.jsonc
 └── README.md
 ```
 
@@ -285,13 +293,13 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 | 外部搜索 / 查 API | `/search` |
 | 前端 / UI 工作 | `/ui` |
 | 方案讨论 / 对比取舍 | `/consult` |
-| 结构化调试 | `/oracle`（自动加载 diagnose） |
+| 结构化调试 | `/oracle` |
 
 ### 典型工作流
 
 **开发新功能（规约驱动）：**
 ```text
-/explore  → /propose  → /apply  → /review  → /archive
+/spec-propose  → /spec-apply  → /review
 ```
 
 **排查 Bug：**
@@ -302,7 +310,7 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 **代码审查：**
 ```text
 /review-pr   ← 审查 PR + 自动回帖
-/review-loop ← 审查→修复循环
+/review      ← 双轴并行审查
 ```
 
 ## 设计哲学
@@ -312,4 +320,4 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 - **Token 效率优先** —— 路径引用替代粘贴文件、技能按需加载、压缩分级管理
 - **插件增效但不喧宾夺主** —— superpowers 提供过程纪律，DCP 智能压缩替代简单截断
 - **执行与探索分离** —— deep-worker/light-orchestrator 禁止研究/委托，explore/librarian 禁止修改
-- **持续改进** —— reflect 机制化发现摩擦、deepwork 审查门控保证质量
+- **持续改进** —— reflect 机制化发现摩擦、code-review 双轴校准保证质量
