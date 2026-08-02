@@ -61,32 +61,22 @@
     "experimental": {
         "batch_tool": true
     },
+    // Built-in utility agents (no .md file). Pro for primary work, Flash for
+    // background chores. `fallback` is not a real schema key — omitted; OpenCode
+    // already falls back small_model -> model internally when a model is missing.
     "agent": {
-        // System agents (no .md file — utility agents managed by OpenCode internally)
-        "build": {
-            "model": "deepseek/deepseek-v4-pro",
-            "mode": "subagent"
-        },
-        "plan": {
-            "model": "deepseek/deepseek-v4-pro"
-        },
-        "title": {
-            "model": "deepseek/deepseek-v4-flash",
-            "fallback": "deepseek/deepseek-v4-pro"
-        },
-        "summary": {
-            "model": "deepseek/deepseek-v4-flash",
-            "fallback": "deepseek/deepseek-v4-pro"
-        },
-        "compaction": {
-            "model": "deepseek/deepseek-v4-flash",
-            "fallback": "deepseek/deepseek-v4-pro"
-        },
-
+        "build": { "model": "deepseek/deepseek-v4-pro", "mode": "subagent" },
+        "plan": { "model": "deepseek/deepseek-v4-pro" },
+        "title": { "model": "deepseek/deepseek-v4-flash" },
+        "summary": { "model": "deepseek/deepseek-v4-flash" },
+        "compaction": { "model": "deepseek/deepseek-v4-flash" }
     },
+    // Trim only oversized tool outputs (full text still saved to disk, preview
+    // returned). Below OpenCode defaults (2000/51200) to actively save context;
+    // normal reads are far smaller and unaffected.
     "tool_output": {
-        "max_lines": 2000,
-        "max_bytes": 51200
+        "max_lines": 1500,
+        "max_bytes": 40960
     },
     "compaction": {
         "auto": true,

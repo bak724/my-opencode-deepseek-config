@@ -1,11 +1,6 @@
 ---
 name: gh-skill
 description: Manage agent skills with gh skill. Use this skill to discover, preview, install, update, and publish Agent Skills so an agent can self-manage the skills available in its environment.
-license: MIT
-compatibility: opencode
-metadata:
-  audience: developers
-  workflow: github
 ---
 
 # Managing skills with `gh skill`

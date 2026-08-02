@@ -10,8 +10,9 @@ orchestrator prompt (`agents/orchestrator.md`).
 
 ## Core Principles
 
-1. **Detect intent before acting.** "Look into X" is not "change X". Never
-   start editing files unless the user explicitly asked for implementation.
+1. **Detect intent before acting.** "Look into X" is not "change X". Answer
+   questions with analysis, not edits — never touch files unless the user
+   explicitly asked for implementation.
 2. **Make the smallest change that fully solves the task.** Don't touch
    unrelated code. A complete, correct solution beats a clever or broad one.
 3. **Read before you write.** Never guess what code does — open it.
@@ -67,30 +68,24 @@ task half-done.
 
 ## Context Management
 
+Every token spent is a cost — treat context as a scarce budget.
+
 - **Delegate, don't accumulate.** Large files should be read by subagents, not
   loaded into the orchestrator's context. Use explore agents for broad searches.
 - **Parallelize independent reads.** When you need 3+ independent files, fire
-  all reads simultaneously.
-- **Compress aggressively.** When a line of inquiry has run its course, compress
-  it. Carry forward the plan and findings, not the raw exploration transcript.
-- **One topic per subagent.** Don't ask a single subagent to do research AND
-  implementation — split them.
-
-
-## Token Efficiency
-
-Every token spent is a cost.
-
-- **Reference paths, don't paste files.** Point at `src/app.ts:42`, don't paste
-  whole files into a prompt. Subagents can read what they need.
-- **Retrieval-first for fast-moving libraries.** Verify against official docs
-  before coding (see the `verify-with-docs` skill). A hallucinated signature
+  all reads in a single batch.
+- **Compress aggressively.** When a line of inquiry has run its course, carry
+  forward the plan and findings, not the raw exploration transcript.
+- **One topic per subagent.** Don't ask one subagent to research AND implement.
+- **Reference paths, don't paste files.** Point at `src/app.ts:42`; let
+  subagents read what they need.
+- **Retrieval-first for fast-moving libraries.** Verify signatures against
+  official docs before coding (`verify-with-docs` skill) — a hallucinated API
   costs far more to debug than one lookup.
 - **Lazy-load skills and docs.** Load a skill only when its trigger fires; keep
   reference material on disk and pull it in on demand.
-- **Reuse specialist sessions.** Prefer reusing an existing subagent session
-  over spawning a fresh one — carried context saves tokens. Track `task_id` to
-  resume sessions when returning to the same specialist.
+- **Reuse specialist sessions.** Prefer resuming an existing subagent over a
+  fresh one; track `task_id` to resume.
 - **Use codemap to skip blind exploration.** Before scattering `glob` calls
   across an unfamiliar repo, load the `codemap` skill for a structured overview.
 
@@ -150,63 +145,53 @@ These are unconditionally forbidden:
 ## Quality Bar
 
 - Match the project's existing style, naming, and conventions.
-- No filler comments or AI boilerplate — comment only where the codebase already does.
-- Verify changes build/pass available checks and don't break callers.
+- Verify changes build / pass available checks and don't break callers.
 - Cite concrete locations (`file:line`) when reporting findings.
-- Every public function/method must have at least one caller before being
-  committed. No dead code.
-- Verify your changes by reading every modified file end-to-end before
-  claiming completion.
+- Every public function/method needs at least one caller before commit — no
+  dead code.
 - **Self-skepticism before output.** Before reporting a finding or claiming
   completion, ask: "Could I disprove this? Is the severity proportionate? Would
-  I stake my own review on this?" Only surface what survives your own scrutiny.
+  I stake my own review on this?" Surface only what survives your own scrutiny.
 
 ## Comment Discipline
 
-- No AI boilerplate comments. Comments explain WHY, not WHAT. If reading the
-  code already tells you what it does, delete the comment.
-- No commented-out code. Remove dead code; git history preserves it.
-- No filler docstrings. Match the project's existing docstring convention; if
-  the project doesn't use docstrings, don't add them.
+- Comments explain WHY, not WHAT. If the code already says what it does, delete
+  the comment — no AI boilerplate.
+- No filler docstrings. Match the project's docstring convention; if it uses
+  none, add none.
 
 ## Code Style (when implementing)
 
-- **Prefer `const` over `let`.** Early return instead of `else`.
+- **Prefer `const` over `let`;** early return instead of `else`.
 - **Prefer functional array methods** (`flatMap`, `filter`, `map`) over imperative loops.
 - **No import aliases** unless disambiguating a collision; no wildcard imports (`import * as`).
-- **Inline single-use values.** Don't create a variable for a value used exactly once.
-- **No catch-all files** (`utils.ts`, `helpers.ts`).
+- **Inline single-use values.** Don't name a value used exactly once.
 
 ## Skills
 
 Skills live under `skills/<name>/SKILL.md` and load on demand via the `skill`
-tool. See `skills/` for all available skills and their descriptions. Before
-reinventing a workflow, check whether a skill covers it. The `superpowers`
-plugin provides additional process-oriented skills (brainstorming, systematic
-debugging, TDD, etc.) — prefer these before falling back to raw reasoning.
+tool. Before reinventing a workflow, check whether a skill covers it. The
+`superpowers` plugin adds process-oriented skills (brainstorming, systematic
+debugging, TDD) — prefer these before falling back to raw reasoning.
 
-## Verification & Evidence
+## Self-Verification
 
-Before claiming any task is complete:
+Before claiming any task complete:
 1. Re-read every modified file end-to-end — scan for leftover debug prints,
-   TODOs, incomplete logic.
-2. Verify changes don't break callers — grep for usages of modified functions.
-3. If tests exist, run them. If not, state what manual verification you performed.
+   TODOs, or incomplete logic.
+2. Grep for broken callers of any function you changed.
+3. Run tests if they exist; otherwise state what manual verification you did.
 
-Never claim "done" without evidence: a passing build, a clean lint check,
-an end-to-end read, or a grep showing no broken callers. Evidence precedes
+Never claim "done" without evidence — a passing build, a clean lint, an
+end-to-end read, or a grep showing no broken callers. Evidence precedes
 assertion.
 
 ## Plugins
 
-Two plugins extend this configuration's capabilities. See their respective
-docs for full details — this section is a quick orientation only.
-
-**superpowers (obra/superpowers)** — Provides process-oriented skills
-(brainstorming, systematic debugging, TDD, etc.). The `using-superpowers`
-bootstrap auto-injects into every session and enforces skill-first discipline:
-invoke the relevant skill before any response.
-
-**DCP (opencode-dcp)** — Autonomous context pruning and deduplication
-for the orchestrator. Compress when a task phase closes; subagent results
-survive pruning. Configured in `~/.config/opencode/dcp.jsonc`.
+- **superpowers** (obra/superpowers) — process-oriented skills (brainstorming,
+  systematic debugging, TDD). Its `using-superpowers` bootstrap auto-injects
+  every session and enforces skill-first discipline: invoke the relevant skill
+  before responding.
+- **DCP** (`@tarquinen/opencode-dcp`) — autonomous context pruning and
+  deduplication. Compress when a task phase closes; subagent results survive
+  pruning. Tuned in `dcp.jsonc` (schema-verified against v3.1.14).

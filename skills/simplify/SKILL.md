@@ -1,11 +1,6 @@
 ---
 name: simplify
 description: Behavior-preserving code simplification — reduce complexity without changing what the code does. Use when the task mentions "simplify", "refactor", "clean up", "reduce complexity", "too clever", "hard to read", or after a feature lands and the code needs polishing. Focused on improving readability, reducing nesting, and removing unnecessary abstraction. Assigned to the oracle agent for deep analysis before editing.
-license: MIT
-compatibility: opencode
-metadata:
-  audience: developers
-  workflow: refactoring
 ---
 
 # Simplify
