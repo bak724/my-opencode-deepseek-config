@@ -11,7 +11,7 @@
 - 会话分享：关闭（`share: "disabled"`）；快照：开启（`snapshot: true`）
 - 权限基线：默认放行，破坏性 bash 命令设为 `ask`；`.env` 类敏感文件 `deny`；外部目录 `ask`
 - 上下文压缩：DCP 主动压缩（35K-75K 阈值）+ OpenCode 原生 compaction 兜底
-- 全局规则：`AGENTS.md`（核心原则、任务拒绝契约、Token 效率、证据纪律、反模式等）
+- 全局规则：`AGENTS.md`（核心原则、任务拒绝契约、上下文与 Token 效率、自我验证、反模式等）
 - 技能：`skills/` 目录下 **17 个** `SKILL.md` 技能，通过原生 `skill` 工具按需加载
 - 插件：`superpowers`（14 个过程型技能）、`@tarquinen/opencode-dcp`（智能上下文裁剪）
 - 实验功能：`batch_tool` 已默认开启
@@ -126,7 +126,7 @@ opencode
 
 | Agent | 模型 | 作用 |
 | --- | --- | --- |
-| `orchestrator` | v4-pro | 默认入口，意图门控、任务分类（6 类）、模型感知路由 |
+| `orchestrator` | v4-pro | 默认入口：意图门控（Intent Gate）+ 模型感知路由 + 后备链 |
 
 ### Subagents
 
@@ -210,7 +210,7 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 
 ## 设计决策与迭代记录
 
-核心思路借鉴了 [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent)（意图门控、只读隔离、反模式）、[oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim)（调度器优先、后备链、拒绝契约）、[anomalyco/opencode](https://github.com/anomalyco/opencode)（配置 Schema、技能体系）、[cli/cli](https://github.com/cli/cli)（gh 完整命令集）、[OpenSpec](https://github.com/Fission-AI/OpenSpec)（delta specs、变更提案更新）、[mattpocock/skills](https://github.com/mattpocock/skills)（交接文档、结构化调试）和 [deepreview](https://github.com/mechanai/deepreview)（熵扫描、收敛检查）的优点，纯配置实现，零额外依赖。
+核心思路借鉴了 [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent)（意图门控、只读隔离、反模式）、[oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim)（调度器优先、后备链、拒绝契约）、[anomalyco/opencode](https://github.com/anomalyco/opencode)（配置 Schema、技能体系）、[cli/cli](https://github.com/cli/cli)（gh 完整命令集）、[OpenSpec](https://github.com/Fission-AI/OpenSpec)（delta specs、变更提案更新）、[mattpocock/skills](https://github.com/mattpocock/skills)（交接文档、结构化调试）、[pi](https://github.com/earendil-works/pi)（先答后改、精简响应）和 [deepreview](https://github.com/mechanai/deepreview)（熵扫描、收敛检查）的优点，纯配置实现，零额外依赖。
 
 > **借鉴而非照搬**：过重的流水线只汲取轻量化设计理念；冗余功能由现有 agents/skills 覆盖，不新增。遵循"精简优先于新增"原则，每次迭代都以净减 token 为目标。
 
@@ -225,6 +225,7 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 | **v19（对齐上游）** | 复核 6 个上游仓库；修正 `/review-pr` 逐行评论 Bug；code-review 路由从裸行数改为有效逻辑体量 |
 | **v20（重构优化）** | `agent/`→`agents/` 对齐 OpenCode 推荐；AGENTS.md 精简 22%（292→229 行）；新增 `diagnose`（6 阶段调试）+ `handoff`（会话交接）技能；spec-workflow 增加 `/update`；code-review 增加熵扫描+收敛检查；agent prompt 去重 20% |
 | **v21（全面瘦身重构）** | 技能 18→17（移除 deepwork/conventional-commits/diagnose，新增 writing-great-skills/shared-language）；命令 29→18（-38%）；AGENTS.md 227→212 行（-7%）；技能逐句 no-op 修剪。code-review 双轴并行 + 校准文件机制。借鉴 pi/deepreview/mattpocock 等 6 个仓库实战经验。 |
+| **v22（Schema 校验瘦身）** | 核对 OpenCode 与 DCP 官方 schema：删除失效的 `agent.fallback` 死键；确认 `dcp.jsonc` 全部键位合法（v3.1.14），零改动不盲增；AGENTS.md 合并「Token 效率」入「上下文管理」并全量去重、修复 `Self-Verification` 悬空引用（212→197 行）；orchestrator 合并三张路由表（128→80 行，-37%，Intent Gate/Agent Directory/Fallback 全保留）；14 个技能剥离被解析器忽略的 `license/compatibility/metadata` frontmatter（-70 行）；`tool_output` 下调为主动省 token（1500 行/40KB）。 |
 
 ## 仓库结构
 
@@ -261,8 +262,8 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 │   ├── verify-with-docs/         # 检索优先 API 验证
 │   └── writing-great-skills/     # 技能编写规范
 ├── opencode.jsonc                # 主配置（18 条命令）
-├── AGENTS.md                     # 全局规则（~212 行）
-├── dcp.jsonc                     # DCP 上下文压缩（DeepSeek 128K）
+├── AGENTS.md                     # 全局规则（~197 行）
+├── dcp.jsonc                     # DCP 上下文压缩（DeepSeek 128K，schema v3.1.14 已校验）
 ├── LICENSE
 └── README.md
 ```
