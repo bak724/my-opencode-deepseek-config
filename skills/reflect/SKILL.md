@@ -1,11 +1,6 @@
 ---
 name: reflect
 description: Review recent work to identify recurring friction and propose minimal, durable improvements to the opencode config (agents, skills, commands, rules). Use when the user says "reflect", "what can we improve", "review our setup", "optimize the config", or after a series of related sessions reveals a pattern worth codifying.
-license: MIT
-compatibility: opencode
-metadata:
-  audience: maintainers
-  workflow: meta
 ---
 
 # Reflect

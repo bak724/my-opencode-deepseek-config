@@ -1,11 +1,6 @@
 ---
 name: code-review
 description: Token-frugal, multi-dimension code review for a diff/branch/PR. Use when reviewing changes, checking a PR, running a review→fix loop, or the task mentions "code review", "review my changes", "review this PR", "找 bug", "审查代码". Scales review depth to diff size, reports findings by dimension and severity, and calibrates against the project's threat model to avoid severity inflation. Reports findings; never rewrites code unless explicitly asked.
-license: MIT
-compatibility: opencode
-metadata:
-  audience: reviewers
-  workflow: review
 ---
 
 # Code Review

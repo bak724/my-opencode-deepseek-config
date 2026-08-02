@@ -1,11 +1,6 @@
 ---
 name: opencode-config
 description: Author and modify OpenCode configuration in this repository — opencode.json keys, agents/*.md frontmatter, skills/*/SKILL.md format, commands, and permissions. Use when editing opencode.json, adding or changing an agent, writing a skill or command, adjusting model routing/permissions, or the task mentions "opencode config", "agent prompt", "SKILL.md", "command", or "permission".
-license: MIT
-compatibility: opencode
-metadata:
-  audience: maintainers
-  workflow: opencode
 ---
 
 # OpenCode Config Authoring

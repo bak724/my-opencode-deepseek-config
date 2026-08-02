@@ -1,11 +1,6 @@
 ---
 name: handoff
 description: Compact the current conversation into a handoff document for the next agent session. Use when handing off work, ending a long session, or the task mentions "handoff", "交接", "hand over", "continue in next session". Saves to OS temp dir, references artifacts by path — never copies.
-license: MIT
-compatibility: opencode
-metadata:
-  audience: developers
-  workflow: productivity
 ---
 
 # Handoff
