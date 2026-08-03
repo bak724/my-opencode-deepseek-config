@@ -34,6 +34,7 @@
   // 受保护文件模式：不裁剪这些文件的操作
   "protectedFilePatterns": [
     "**/opencode.json",
+    "**/opencode.jsonc",
     "**/AGENTS.md",
     "**/*.env*",
     "**/.opencode/**"
