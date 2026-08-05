@@ -80,13 +80,13 @@ opencode
 
 ```powershell
 New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.config"
-git clone https://github.com/<your-username>/my-opencode-deepseek-config.git "$env:USERPROFILE\.config\opencode"
+git clone https://github.com/znlgis/my-opencode-deepseek-config.git "$env:USERPROFILE\.config\opencode"
 ```
 
 **Linux / macOS：**
 
 ```bash
-git clone https://github.com/<your-username>/my-opencode-deepseek-config.git ~/.config/opencode
+git clone https://github.com/znlgis/my-opencode-deepseek-config.git ~/.config/opencode
 ```
 
 > **兼容性说明**：`~/.config/opencode` 是 OpenCode 的标准全局配置路径。本仓库的 `agents/`、`skills/`、`AGENTS.md` 等文件遵循 OpenCode 的约定布局，克隆后无需额外配置即可被自动识别。
