@@ -12,7 +12,7 @@
 - 权限基线：默认放行，破坏性 bash 命令设为 `ask`；`.env` 类敏感文件 `deny`；外部目录 `ask`
 - 上下文压缩：DCP 主动压缩（35K-75K 阈值）+ OpenCode 原生 compaction 兜底
 - 全局规则：`AGENTS.md`（核心原则、任务拒绝契约、上下文与 Token 效率、自我验证、反模式等）
-- 技能：`skills/` 目录下 **17 个** `SKILL.md` 技能，通过原生 `skill` 工具按需加载
+- 技能：`skills/` 目录下 **16 个** `SKILL.md` 技能，通过原生 `skill` 工具按需加载
 - 插件：`superpowers`（14 个过程型技能）、`@tarquinen/opencode-dcp`（智能上下文裁剪）
 - 实验功能：`batch_tool` 已默认开启
 
@@ -192,8 +192,7 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 | --- | --- |
 | `code-review` | 双轴并行审查（规范 + 规约）+ 严重度校准 |
 | `codemap` | 生成带标注的仓库结构图，节省探索 token |
-| `gh-cli` | GitHub CLI v2.96+ 全面参考（Issues 2.0、copilot、agent-task） |
-| `gh-skill` | 发现、安装、更新、发布 Agent 技能 |
+| `gh-cli` | GitHub CLI v2.96+ 全面参考（Issues 2.0、copilot、agent-task、gh skill） |
 | `git-master` | 高级 Git 操作：rebase、squash、bisect、reflog、worktree |
 | `git-release` | Tag 发布：SemVer 推断、发布说明、gh release 命令 |
 | `handoff` | 压缩会话为交接文档（路径引用，不复制内容） |
@@ -226,6 +225,7 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 | **v20（重构优化）** | `agent/`→`agents/` 对齐 OpenCode 推荐；AGENTS.md 精简 22%（292→229 行）；新增 `diagnose`（6 阶段调试）+ `handoff`（会话交接）技能；spec-workflow 增加 `/update`；code-review 增加熵扫描+收敛检查；agent prompt 去重 20% |
 | **v21（全面瘦身重构）** | 技能 18→17（移除 deepwork/conventional-commits/diagnose，新增 writing-great-skills/shared-language）；命令 29→18（-38%）；AGENTS.md 227→212 行（-7%）；技能逐句 no-op 修剪。code-review 双轴并行 + 校准文件机制。借鉴 pi/deepreview/mattpocock 等 6 个仓库实战经验。 |
 | **v22（Schema 校验瘦身）** | 核对 OpenCode 与 DCP 官方 schema：删除失效的 `agent.fallback` 死键；确认 `dcp.jsonc` 全部键位合法（v3.1.14），零改动不盲增；AGENTS.md 合并「Token 效率」入「上下文管理」并全量去重、修复 `Self-Verification` 悬空引用（212→197 行）；orchestrator 合并三张路由表（128→80 行，-37%，Intent Gate/Agent Directory/Fallback 全保留）；14 个技能剥离被解析器忽略的 `license/compatibility/metadata` frontmatter（-70 行）；`tool_output` 下调为主动省 token（1500 行/40KB）。 |
+| **v23（整合双纪律+精简合并）** | 基于 6 个上游仓库最终整合：删除 `gh-skill`（功能合并入 `gh-cli` Agent Skills 节，-123 行）；修复 `verification-planning` 死引用；AGENTS.md 新增 Pi 启发二纪律（先答后改+表态、全局 brevity）+ slim 委派契约+job board + deepreview 文件 IPC（+20 行）；orchestrator 表去重模型列（-5 行）；reviewer 补验证者默认拒绝立场（+6 行）；gh-cli Agent Skills 节强化（+10 行）。净减 ~110 行，skills 17→16。 |
 
 ## 仓库结构
 
@@ -243,11 +243,10 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 │   ├── explore.md                # flash：代码库搜索（只读）
 │   ├── librarian.md              # flash：外部检索（只读）
 │   └── light-orchestrator.md     # flash：简单编辑
-├── skills/                       # 17 个按需加载技能
+├── skills/                       # 16 个按需加载技能
 │   ├── code-review/              # 双轴并行审查 + 严重度校准
 │   ├── codemap/                  # 生成仓库结构图
 │   ├── gh-cli/                   # GitHub CLI v2.96+ 参考
-│   ├── gh-skill/                 # gh skill 管理
 │   ├── git-master/               # 高级 Git 操作
 │   ├── git-release/              # Tag 发布
 │   ├── handoff/                  # 会话压缩为交接文档

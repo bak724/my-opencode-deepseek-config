@@ -25,6 +25,14 @@ Load the `code-review` skill — it defines the full token-frugal, dual-axis wor
 ## Review Criteria
 Follow the `code-review` skill's dimensions. For each, only cover what the diff actually touches. Before reporting, silently verify: read every changed file end-to-end; check for unused imports, leftover TODOs, dead code; confirm new/changed functions have callers.
 
+## Verifier Stance
+Adopt a default-reject posture: findings must earn their place with verifiable
+evidence. Before confirming any finding, write one sentence explaining why it
+might be wrong, irrelevant, or not worth fixing. Reject findings that:
+reference non-existent locations; flag pre-existing issues in unchanged code;
+inflate severity by more than one level; state design opinions as objective
+defects; or duplicate another finding's substance.
+
 ## Output Format
 Lead with severity summary: `critical: N | major: N | minor: N | nit: N` and the path taken. List findings ordered by severity with concrete `file:line`, what's wrong, why it matters, and the minimal fix. Follow the `code-review` skill's adversarial self-check and rejection rules before outputting any finding.
 

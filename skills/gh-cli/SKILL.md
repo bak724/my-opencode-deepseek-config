@@ -355,13 +355,15 @@ gh alias delete myprs
 ## Agent Skills (`gh skill`) — v2.94.0+
 
 First-class command group for discovering, installing, and publishing Agent Skills.
-See the `gh-skill` skill for the full workflow.
+Replaces the standalone `gh-skill` skill (deleted in v23).
 
 ```bash
 # Discovery
 gh skill search <query> --agent opencode               # search for skills (v2.90.0+)
 gh skill list --agent opencode --json name,description # list available skills
+gh skill list --json name,description,installed        # list installed skills (v2.95.0+)
 gh skill preview <skill-id> --agent opencode            # preview a skill's content before installing (v2.90.0+)
+gh skill view <skill-id> --agent opencode               # view an installed skill's content (v2.95.0+)
 
 # Installation
 gh skill install owner/repo --agent opencode            # install with agent binding
@@ -374,6 +376,7 @@ gh skill install --from-local ./local-repo               # install from a local 
 
 # Management
 gh skill update <skill-id> --agent opencode             # update an installed skill (v2.90.0+)
+gh skill update --all --agent opencode                  # update all installed skills (v2.95.0+)
 gh skill uninstall owner/repo                            # remove an installed skill
 gh skill publish                                         # publish a new skill from cwd
 ```
@@ -381,6 +384,8 @@ gh skill publish                                         # publish a new skill f
 `gh skill install --agent opencode` creates the skill under
 `~/.config/opencode/skills/<name>/SKILL.md`. Use `--agent` to target a specific
 coding agent; omitting it installs to the system-global skills directory.
+Skills installed via `gh skill` appear in the agent's available skills list
+automatically — no config change needed.
 
 ## AI-integrated commands (`gh copilot`, `gh agent-task`)
 

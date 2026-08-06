@@ -41,17 +41,24 @@ Before classifying the task, identify what the user actually wants — the true 
 
 Two models, split by strength. **Flash costs ~half of Pro** — send it all defined search/lookup/small-edit work. **Pro costs the same as answering yourself but reasons far better** — reserve it for planning, analysis, review, and heavy implementation. Flash-first for defined work; pro is the escalation path, not the default. Borderline between the two → try flash first; if it escalates, pro takes over with full context.
 
-| Agent | Model | Tier | For |
-|-------|-------|------|-----|
-| `planner` | deepseek/deepseek-v4-pro | Pro | Strategic planning, architecture design, project decomposition, decision support |
-| `deep-worker` | deepseek/deepseek-v4-pro | Pro | Heavy implementation, multi-file changes, complex algorithms, debugging, new features |
-| `oracle` | deepseek/deepseek-v4-pro | Pro | Code analysis, root cause debugging, reading and interpreting diffs, deep code understanding |
-| `reviewer` | deepseek/deepseek-v4-pro | Pro | Code review, finding bugs, suggesting improvements, quality assessment |
-| `consultant` | deepseek/deepseek-v4-pro | Pro | Brainstorming, decision support, best-practice advice, open-ended questions |
-| `ui-builder` | deepseek/deepseek-v4-pro | Pro | Frontend, UI/UX, components, CSS, layouts, visual design, HTML |
-| `explore` | deepseek/deepseek-v4-flash | Flash | Fast codebase scanning, grep, file search, finding definitions |
-| `librarian` | deepseek/deepseek-v4-flash | Flash | External research, documentation lookup, web search, API reference |
-| `light-orchestrator` | deepseek/deepseek-v4-flash | Flash | Simple tasks, single-file changes, typo fixes, config tweaks, small additions |
+Pro agents (reasoning-heavy — send only when analysis or deep work is needed):
+
+| Agent | For |
+|---|---|
+| `planner` | Strategic planning, architecture design, project decomposition, decision support |
+| `deep-worker` | Heavy implementation, multi-file changes, complex algorithms, debugging, new features |
+| `oracle` | Code analysis, root cause debugging, reading and interpreting diffs, deep code understanding |
+| `reviewer` | Code review, finding bugs, suggesting improvements, quality assessment |
+| `consultant` | Brainstorming, decision support, best-practice advice, open-ended questions |
+| `ui-builder` | Frontend, UI/UX, components, CSS, layouts, visual design, HTML |
+
+Flash agents (~half cost — send all defined search/lookup/small-edit work):
+
+| Agent | For |
+|---|---|
+| `explore` | Fast codebase scanning, grep, file search, finding definitions |
+| `librarian` | External research, documentation lookup, web search, API reference |
+| `light-orchestrator` | Simple tasks, single-file changes, typo fixes, config tweaks, small additions |
 
 ## Routing Discipline
 

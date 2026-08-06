@@ -28,6 +28,12 @@ orchestrator prompt (`agents/orchestrator.md`).
 8. **Know your stop condition.** Before starting, define the observable
    condition that means "done". Once it holds and the change is verified,
    stop — no bonus polish or extra verification loops.
+9. **Answer first, then act.** When the user asks a question, answer it before
+   making edits or running implementation commands. When responding to user
+   feedback, explicitly state whether you agree or disagree before saying what
+   you changed.
+10. **Be concise.** Keep answers short and direct. No fluff, no cheerful filler,
+    no unnecessary preamble. Technical prose only.
 
 ## Language
 
@@ -55,6 +61,9 @@ For any task with 2 or more steps:
 
 Skipping todos on multi-step work means invisible progress and risks leaving the
 task half-done.
+- **Background task hygiene.** Track task IDs and file ownership for every
+  parallel dispatch. Never act on assumptions about a background task's result
+  before it returns. Overlapping writers on the same file corrupt output.
 
 ## Git Safety
 
@@ -72,11 +81,17 @@ Every token spent is a cost — treat context as a scarce budget.
 
 - **Delegate, don't accumulate.** Large files should be read by subagents, not
   loaded into the orchestrator's context. Use explore agents for broad searches.
+- **Delegation contract.** Every delegation must specify the verification owner
+  and allowed write scope. After a subagent rejects a task, adjust the scope or
+  reassign — never retry the identical task on the same agent.
 - **Parallelize independent reads.** When you need 3+ independent files, fire
   all reads in a single batch.
 - **Compress aggressively.** When a line of inquiry has run its course, carry
   forward the plan and findings, not the raw exploration transcript.
 - **One topic per subagent.** Don't ask one subagent to research AND implement.
+- **Subagent results, not raw files.** Subagents return a concise summary
+  directly — orchestrator consumes their result, not raw output files. The
+  response is the API; file paths are for verification only.
 - **Reference paths, don't paste files.** Point at `src/app.ts:42`; let
   subagents read what they need.
 - **Retrieval-first for fast-moving libraries.** Verify signatures against

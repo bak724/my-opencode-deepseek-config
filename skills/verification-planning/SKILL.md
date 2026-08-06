@@ -36,8 +36,6 @@ Define one observable condition that means "verified":
 - "The build passes with zero type errors"
 - "`curl /api/users` returns 200 with expected JSON schema"
 - "The test `should reject invalid email` passes"
-# (removed — deepwork skill deleted in v21)
-
 ## Step 3: Run verification, report outcome
 
 After implementation:
