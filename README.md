@@ -1,5 +1,7 @@
 # My OpenCode × DeepSeek Config
 
+**简体中文** | [繁體中文](README.zh-TW.md) | [English](README.en-US.md) | [Русский](README.ru-RU.md) | [Français](README.fr-FR.md) | [Deutsch](README.de-DE.md) | [Español](README.es-ES.md) | [Português](README.pt-BR.md) | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md)
+
 **OpenCode × DeepSeek 最优配置** —— 在 OpenCode 多 Agent 框架下，将 DeepSeek V4 双模型（Pro + Flash）的能力发挥到极致的配置方案。核心理念：**Token 效率优先，用最小的上下文成本达到最好的开发效果**。
 
 ## 当前配置概览
@@ -222,10 +224,10 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 | **v13-v15（契约+精简）** | AGENTS.md 新增 Evidence Discipline / Task Rejection Contract / stop condition；全量去重 agent prompt 与全局规则；补齐后台子 agent 错误核查 |
 | **v16-v18（高效执行）** | 移除神话名称、合并路由表、gh-cli 扩至 Issues 2.0、spec-workflow 增加 verify + 决策框架 |
 | **v19（对齐上游）** | 复核 6 个上游仓库；修正 `/review-pr` 逐行评论 Bug；code-review 路由从裸行数改为有效逻辑体量 |
-| **v20（重构优化）** | `agent/`→`agents/` 对齐 OpenCode 推荐；AGENTS.md 精简 22%（292→229 行）；新增 `diagnose`（6 阶段调试）+ `handoff`（会话交接）技能；spec-workflow 增加 `/update`；code-review 增加熵扫描+收敛检查；agent prompt 去重 20% |
+| **v20（重构优化）** | `agent/`→`agents/` 对齐 OpenCode 推荐；AGENTS.md 精简 22%（290→227 行）；新增 `diagnose`（6 阶段调试）+ `handoff`（会话交接）技能；spec-workflow 增加 `/update`；code-review 增加熵扫描+收敛检查；agent prompt 去重 20% |
 | **v21（全面瘦身重构）** | 技能 18→17（移除 deepwork/conventional-commits/diagnose，新增 writing-great-skills/shared-language）；命令 29→18（-38%）；AGENTS.md 227→212 行（-7%）；技能逐句 no-op 修剪。code-review 双轴并行 + 校准文件机制。借鉴 pi/deepreview/mattpocock 等 6 个仓库实战经验。 |
-| **v22（Schema 校验瘦身）** | 核对 OpenCode 与 DCP 官方 schema：删除失效的 `agent.fallback` 死键；确认 `dcp.jsonc` 全部键位合法（v3.1.14），零改动不盲增；AGENTS.md 合并「Token 效率」入「上下文管理」并全量去重、修复 `Self-Verification` 悬空引用（212→197 行）；orchestrator 合并三张路由表（128→80 行，-37%，Intent Gate/Agent Directory/Fallback 全保留）；14 个技能剥离被解析器忽略的 `license/compatibility/metadata` frontmatter（-70 行）；`tool_output` 下调为主动省 token（1500 行/40KB）。 |
-| **v23（整合双纪律+精简合并）** | 基于 6 个上游仓库最终整合：删除 `gh-skill`（功能合并入 `gh-cli` Agent Skills 节，-123 行）；修复 `verification-planning` 死引用；AGENTS.md 新增 Pi 启发二纪律（先答后改+表态、全局 brevity）+ slim 委派契约+job board + deepreview 文件 IPC（+20 行）；orchestrator 表去重模型列（-5 行）；reviewer 补验证者默认拒绝立场（+6 行）；gh-cli Agent Skills 节强化（+10 行）。净减 ~110 行，skills 17→16。 |
+| **v22（Schema 校验瘦身）** | 核对 OpenCode 与 DCP 官方 schema：删除失效的 `agent.fallback` 死键；确认 `dcp.jsonc` 全部键位合法（v3.1.14），零改动不盲增；AGENTS.md 合并「Token 效率」入「上下文管理」并全量去重、修复 `Self-Verification` 悬空引用（212→197 行）；orchestrator 合并三张路由表（128→79 行，-38%，Intent Gate/Agent Directory/Fallback 全保留）；14 个技能剥离被解析器忽略的 `license/compatibility/metadata` frontmatter（-70 行）；`tool_output` 下调为主动省 token（1500 行/40KB）。 |
+| **v23（整合双纪律+精简合并）** | 基于 6 个上游仓库最终整合：删除 `gh-skill`（功能合并入 `gh-cli` Agent Skills 节，-122 行）；修复 `verification-planning` 死引用；AGENTS.md 新增 Pi 启发二纪律（先答后改+表态、全局 brevity）+ slim 委派契约+job board + deepreview 文件 IPC（+15 行）；orchestrator 表去重模型列（重组为 Pro/Flash 子表，79→86 行）；reviewer 补验证者默认拒绝立场（+6 行）；gh-cli Agent Skills 节强化（+10 行）。净减 ~90 行，skills 17→16。 |
 
 ## 仓库结构
 
@@ -261,8 +263,8 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 │   ├── verify-with-docs/         # 检索优先 API 验证
 │   └── writing-great-skills/     # 技能编写规范
 ├── opencode.jsonc                # 主配置（18 条命令）
-├── AGENTS.md                     # 全局规则（~197 行）
-├── dcp.jsonc                     # DCP 上下文压缩（DeepSeek 128K，schema v3.1.14 已校验）
+├── AGENTS.md                     # 全局规则（~212 行）
+├── dcp.jsonc                     # DCP 上下文压缩（DeepSeek 128K）
 ├── LICENSE
 └── README.md
 ```
