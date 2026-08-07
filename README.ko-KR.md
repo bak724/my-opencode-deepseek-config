@@ -76,29 +76,49 @@ Pro 모델에 thinking/reasoning을 활성화하려면 `provider`에 다음을 �
 
 ## 설치 및 배포
 
-### 방식 1: 전역 구성 디렉터리에 클론(권장)
+### 방식 1: 클론 + 환경 변수(권장, 크로스 플랫폼)
 
-**Windows(PowerShell):**
+```bash
+git clone https://github.com/znlgis/my-opencode-deepseek-config.git
+```
+
+그런 다음 `OPENCODE_CONFIG_DIR`을 저장소 내 `opencode/` 하위 디렉터리로 지정하면 사용할 수 있습니다.
+
+**Windows(PowerShell)** —— 영구 설정:
+
+```powershell
+[Environment]::SetEnvironmentVariable("OPENCODE_CONFIG_DIR", "D:\path\to\my-opencode-deepseek-config\opencode", "User")
+```
+
+**Windows(PowerShell)** —— 임시 설정(현재 세션만):
+
+```powershell
+$env:OPENCODE_CONFIG_DIR = "D:\path\to\my-opencode-deepseek-config\opencode"
+opencode
+```
+
+**Linux / macOS** —— `~/.bashrc` 또는 `~/.zshrc`에 추가:
+
+```bash
+export OPENCODE_CONFIG_DIR="$HOME/path/to/my-opencode-deepseek-config/opencode"
+```
+
+### 방식 2: 전역 구성 디렉터리로 심볼릭 링크
+
+**Windows(PowerShell, 관리자 권한 필요):**
 
 ```powershell
 New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.config"
-git clone https://github.com/znlgis/my-opencode-deepseek-config.git "$env:USERPROFILE\.config\opencode"
+New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.config\opencode" -Target "D:\path\to\my-opencode-deepseek-config\opencode"
 ```
 
 **Linux / macOS:**
 
 ```bash
-git clone https://github.com/znlgis/my-opencode-deepseek-config.git ~/.config/opencode
+ln -s /path/to/my-opencode-deepseek-config/opencode ~/.config/opencode
 ```
 
-> **호환성 설명**: `~/.config/opencode`는 OpenCode의 표준 전역 구성 경로입니다. 본 저장소의 `agents/`, `skills/`, `AGENTS.md` 등 파일은 OpenCode의 규칙적 레이아웃을 따르므로, 클론 후 별도 설정 없이 자동으로 인식됩니다.
-
-### 방식 2: 임의 위치에 클론 + 환경 변수
-
-```powershell
-$env:OPENCODE_CONFIG_DIR = "D:\path\to\opencode-config"
-opencode
-```
+> **호환성 설명**: `~/.config/opencode`는 OpenCode의 표준 전역 구성 경로입니다. 구성 파일(`agents/`, `skills/`, `AGENTS.md` 등)은 본 저장소의 `opencode/` 하위 디렉터리에 있으며 OpenCode의 규칙적 레이아웃을 따릅니다. 환경 변수나 심볼릭 링크로 지정하면 자동으로 인식됩니다.
 
 ### 설치 확인
 
@@ -232,41 +252,43 @@ OpenCode는 네이티브 `skill` 도구를 통해 필요 시 스킬을 노출합
 ## 저장소 구조
 
 ```text
-├── .ai/
-│   └── calibration.yml           # code-review 심각도 보정
-├── agents/                       # 10개 전담 에이전트
-│   ├── orchestrator.md           # 주 진입점: 의도 게이트 + 모델 인식 라우팅
-│   ├── planner.md                # pro: 아키텍처와 계획
-│   ├── deep-worker.md            # pro: 중량 구현
-│   ├── oracle.md                 # pro: 심층 코드 분석(읽기 전용)
-│   ├── reviewer.md               # pro: 이중 축 코드 리뷰(읽기 전용)
-│   ├── consultant.md             # pro: 방안 논의와 조언
-│   ├── ui-builder.md             # pro: 프론트엔드와 UI
-│   ├── explore.md                # flash: 코드베이스 검색(읽기 전용)
-│   ├── librarian.md              # flash: 외부 검색(읽기 전용)
-│   └── light-orchestrator.md     # flash: 간단한 편집
-├── skills/                       # 16개 필요 시 로드 스킬
-│   ├── code-review/              # 이중 축 병렬 리뷰 + 심각도 보정
-│   ├── codemap/                  # 저장소 구조도 생성
-│   ├── gh-cli/                   # GitHub CLI v2.96+ 참조
-│   ├── git-master/               # 고급 Git 작업
-│   ├── git-release/              # 태그 릴리스
-│   ├── handoff/                  # 세션을 인수인계 문서로 압축
-│   ├── opencode-config/          # 메타 스킬: 본 저장소 구성 작성
-│   ├── reflect/                  # 지속적 개선
-│   ├── remove-deadcode/          # 데드 코드 감지 및 삭제
-│   ├── security-review/          # 보안 감사 체크리스트
-│   ├── shared-language/          # 도메인 용어집(토큰 절약)
-│   ├── simplify/                 # 동작 유지 코드 단순화
-│   ├── spec-workflow/            # 스펙 주도 개발
-│   ├── verification-planning/    # 구현 전 검증 경로 계획
-│   ├── verify-with-docs/         # 검색 우선 API 검증
-│   └── writing-great-skills/     # 스킬 작성 규범
-├── opencode.jsonc                # 주 구성(18개 명령)
-├── AGENTS.md                     # 전역 규칙(~212줄)
-├── dcp.jsonc                     # DCP 컨텍스트 압축(DeepSeek 128K)
+├── opencode/                     # OpenCode 구성 디렉터리(독립 배포 가능)
+│   ├── .ai/
+│   │   └── calibration.yml       # code-review 심각도 보정
+│   ├── agents/                   # 10개 전담 에이전트
+│   │   ├── orchestrator.md       # 주 진입점: 의도 게이트 + 모델 인식 라우팅
+│   │   ├── planner.md            # pro: 아키텍처와 계획
+│   │   ├── deep-worker.md        # pro: 중량 구현
+│   │   ├── oracle.md             # pro: 심층 코드 분석(읽기 전용)
+│   │   ├── reviewer.md           # pro: 이중 축 코드 리뷰(읽기 전용)
+│   │   ├── consultant.md         # pro: 방안 논의와 조언
+│   │   ├── ui-builder.md         # pro: 프론트엔드와 UI
+│   │   ├── explore.md            # flash: 코드베이스 검색(읽기 전용)
+│   │   ├── librarian.md          # flash: 외부 검색(읽기 전용)
+│   │   └── light-orchestrator.md # flash: 간단한 편집
+│   ├── skills/                   # 16개 필요 시 로드 스킬
+│   │   ├── code-review/          # 이중 축 병렬 리뷰 + 심각도 보정
+│   │   ├── codemap/              # 저장소 구조도 생성
+│   │   ├── gh-cli/               # GitHub CLI v2.96+ 참조
+│   │   ├── git-master/           # 고급 Git 작업
+│   │   ├── git-release/          # 태그 릴리스
+│   │   ├── handoff/              # 세션을 인수인계 문서로 압축
+│   │   ├── opencode-config/      # 메타 스킬: 본 저장소 구성 작성
+│   │   ├── reflect/              # 지속적 개선
+│   │   ├── remove-deadcode/      # 데드 코드 감지 및 삭제
+│   │   ├── security-review/      # 보안 감사 체크리스트
+│   │   ├── shared-language/      # 도메인 용어집(토큰 절약)
+│   │   ├── simplify/             # 동작 유지 코드 단순화
+│   │   ├── spec-workflow/        # 스펙 주도 개발
+│   │   ├── verification-planning/ # 구현 전 검증 경로 계획
+│   │   ├── verify-with-docs/     # 검색 우선 API 검증
+│   │   └── writing-great-skills/ # 스킬 작성 규범
+│   ├── opencode.jsonc            # 주 구성(18개 명령)
+│   ├── AGENTS.md                 # 전역 규칙(~212줄)
+│   └── dcp.jsonc                 # DCP 컨텍스트 압축(DeepSeek 128K)
+├── README.md
 ├── LICENSE
-└── README.md
+└── README.*.md                   # 기타 언어 README
 ```
 
 ## 사용 가이드

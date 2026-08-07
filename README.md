@@ -76,29 +76,49 @@ opencode
 
 ## 安装部署
 
-### 方式一：克隆到全局配置目录（推荐）
+### 方式一：克隆 + 环境变量（推荐，跨平台通用）
 
-**Windows（PowerShell）：**
+```bash
+git clone https://github.com/znlgis/my-opencode-deepseek-config.git
+```
+
+然后将 `OPENCODE_CONFIG_DIR` 指向仓库内的 `opencode/` 子目录即可使用。
+
+**Windows（PowerShell）** —— 永久生效：
+
+```powershell
+[Environment]::SetEnvironmentVariable("OPENCODE_CONFIG_DIR", "D:\path\to\my-opencode-deepseek-config\opencode", "User")
+```
+
+**Windows（PowerShell）** —— 临时生效（仅当前会话）：
+
+```powershell
+$env:OPENCODE_CONFIG_DIR = "D:\path\to\my-opencode-deepseek-config\opencode"
+opencode
+```
+
+**Linux / macOS** —— 追加到 `~/.bashrc` 或 `~/.zshrc`：
+
+```bash
+export OPENCODE_CONFIG_DIR="$HOME/path/to/my-opencode-deepseek-config/opencode"
+```
+
+### 方式二：符号链接到全局配置目录
+
+**Windows（PowerShell，需管理员）：**
 
 ```powershell
 New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.config"
-git clone https://github.com/znlgis/my-opencode-deepseek-config.git "$env:USERPROFILE\.config\opencode"
+New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.config\opencode" -Target "D:\path\to\my-opencode-deepseek-config\opencode"
 ```
 
 **Linux / macOS：**
 
 ```bash
-git clone https://github.com/znlgis/my-opencode-deepseek-config.git ~/.config/opencode
+ln -s /path/to/my-opencode-deepseek-config/opencode ~/.config/opencode
 ```
 
-> **兼容性说明**：`~/.config/opencode` 是 OpenCode 的标准全局配置路径。本仓库的 `agents/`、`skills/`、`AGENTS.md` 等文件遵循 OpenCode 的约定布局，克隆后无需额外配置即可被自动识别。
-
-### 方式二：克隆到任意位置 + 环境变量
-
-```powershell
-$env:OPENCODE_CONFIG_DIR = "D:\path\to\opencode-config"
-opencode
-```
+> **兼容性说明**：`~/.config/opencode` 是 OpenCode 的标准全局配置路径。本仓库的 `opencode/` 子目录内含 `agents/`、`skills/`、`AGENTS.md` 等文件，布局完全遵循 OpenCode 约定，通过环境变量或符号链接指向后即可被自动识别。
 
 ### 验证安装
 
@@ -232,41 +252,43 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 ## 仓库结构
 
 ```text
-├── .ai/
-│   └── calibration.yml           # code-review 严重度校准
-├── agents/                       # 10 个专职 Agent
-│   ├── orchestrator.md           # 主入口：意图门控 + 模型感知路由
-│   ├── planner.md                # pro：架构与规划
-│   ├── deep-worker.md            # pro：重型实现
-│   ├── oracle.md                 # pro：深度代码分析（只读）
-│   ├── reviewer.md               # pro：双轴代码审查（只读）
-│   ├── consultant.md             # pro：方案讨论与建议
-│   ├── ui-builder.md             # pro：前端与 UI
-│   ├── explore.md                # flash：代码库搜索（只读）
-│   ├── librarian.md              # flash：外部检索（只读）
-│   └── light-orchestrator.md     # flash：简单编辑
-├── skills/                       # 16 个按需加载技能
-│   ├── code-review/              # 双轴并行审查 + 严重度校准
-│   ├── codemap/                  # 生成仓库结构图
-│   ├── gh-cli/                   # GitHub CLI v2.96+ 参考
-│   ├── git-master/               # 高级 Git 操作
-│   ├── git-release/              # Tag 发布
-│   ├── handoff/                  # 会话压缩为交接文档
-│   ├── opencode-config/          # 元技能：本仓库配置编写
-│   ├── reflect/                  # 持续改进
-│   ├── remove-deadcode/          # 死代码检测与删除
-│   ├── security-review/          # 安全审查清单
-│   ├── shared-language/          # 领域术语表（节省 token）
-│   ├── simplify/                 # 行为保持的代码简化
-│   ├── spec-workflow/            # 规约驱动开发
-│   ├── verification-planning/    # 实现前验证路径规划
-│   ├── verify-with-docs/         # 检索优先 API 验证
-│   └── writing-great-skills/     # 技能编写规范
-├── opencode.jsonc                # 主配置（18 条命令）
-├── AGENTS.md                     # 全局规则（~212 行）
-├── dcp.jsonc                     # DCP 上下文压缩（DeepSeek 128K）
+├── opencode/                     # OpenCode 配置目录（可独立部署）
+│   ├── .ai/
+│   │   └── calibration.yml       # code-review 严重度校准
+│   ├── agents/                   # 10 个专职 Agent
+│   │   ├── orchestrator.md       # 主入口：意图门控 + 模型感知路由
+│   │   ├── planner.md            # pro：架构与规划
+│   │   ├── deep-worker.md        # pro：重型实现
+│   │   ├── oracle.md             # pro：深度代码分析（只读）
+│   │   ├── reviewer.md           # pro：双轴代码审查（只读）
+│   │   ├── consultant.md         # pro：方案讨论与建议
+│   │   ├── ui-builder.md         # pro：前端与 UI
+│   │   ├── explore.md            # flash：代码库搜索（只读）
+│   │   ├── librarian.md          # flash：外部检索（只读）
+│   │   └── light-orchestrator.md # flash：简单编辑
+│   ├── skills/                   # 16 个按需加载技能
+│   │   ├── code-review/          # 双轴并行审查 + 严重度校准
+│   │   ├── codemap/              # 生成仓库结构图
+│   │   ├── gh-cli/               # GitHub CLI v2.96+ 参考
+│   │   ├── git-master/           # 高级 Git 操作
+│   │   ├── git-release/          # Tag 发布
+│   │   ├── handoff/              # 会话压缩为交接文档
+│   │   ├── opencode-config/      # 元技能：本仓库配置编写
+│   │   ├── reflect/              # 持续改进
+│   │   ├── remove-deadcode/      # 死代码检测与删除
+│   │   ├── security-review/      # 安全审查清单
+│   │   ├── shared-language/      # 领域术语表（节省 token）
+│   │   ├── simplify/             # 行为保持的代码简化
+│   │   ├── spec-workflow/        # 规约驱动开发
+│   │   ├── verification-planning/ # 实现前验证路径规划
+│   │   ├── verify-with-docs/     # 检索优先 API 验证
+│   │   └── writing-great-skills/ # 技能编写规范
+│   ├── opencode.jsonc            # 主配置（18 条命令）
+│   ├── AGENTS.md                 # 全局规则（~212 行）
+│   └── dcp.jsonc                 # DCP 上下文压缩（DeepSeek 128K）
+├── README.md
 ├── LICENSE
-└── README.md
+└── README.*.md                   # 其他语言 README
 ```
 
 ## 使用指南

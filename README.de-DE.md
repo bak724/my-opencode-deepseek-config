@@ -76,29 +76,49 @@ Um Thinking/Reasoning für das Pro-Modell zu aktivieren, in `provider` ergänzen
 
 ## Installation und Deployment
 
-### Methode 1: In globales Konfigurationsverzeichnis klonen (empfohlen)
+### Methode 1: Klonen + Umgebungsvariable (empfohlen, plattformübergreifend)
 
-**Windows (PowerShell):**
+```bash
+git clone https://github.com/znlgis/my-opencode-deepseek-config.git
+```
+
+Dann `OPENCODE_CONFIG_DIR` auf das Unterverzeichnis `opencode/` des Repositorys setzen.
+
+**Windows (PowerShell)** — dauerhaft:
+
+```powershell
+[Environment]::SetEnvironmentVariable("OPENCODE_CONFIG_DIR", "D:\path\to\my-opencode-deepseek-config\opencode", "User")
+```
+
+**Windows (PowerShell)** — temporär (nur aktuelle Sitzung):
+
+```powershell
+$env:OPENCODE_CONFIG_DIR = "D:\path\to\my-opencode-deepseek-config\opencode"
+opencode
+```
+
+**Linux / macOS** — in `~/.bashrc` oder `~/.zshrc` eintragen:
+
+```bash
+export OPENCODE_CONFIG_DIR="$HOME/path/to/my-opencode-deepseek-config/opencode"
+```
+
+### Methode 2: Symbolischer Link zum globalen Konfigurationsverzeichnis
+
+**Windows (PowerShell, Administratorrechte erforderlich):**
 
 ```powershell
 New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.config"
-git clone https://github.com/znlgis/my-opencode-deepseek-config.git "$env:USERPROFILE\.config\opencode"
+New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.config\opencode" -Target "D:\path\to\my-opencode-deepseek-config\opencode"
 ```
 
 **Linux / macOS:**
 
 ```bash
-git clone https://github.com/znlgis/my-opencode-deepseek-config.git ~/.config/opencode
+ln -s /path/to/my-opencode-deepseek-config/opencode ~/.config/opencode
 ```
 
-> **Kompatibilitätshinweis**: `~/.config/opencode` ist der standardmäßige globale Konfigurationspfad von OpenCode. Die Dateien `agents/`, `skills/`, `AGENTS.md` usw. in diesem Repository folgen der OpenCode-Konvention und werden nach dem Klonen automatisch erkannt.
-
-### Methode 2: An beliebigen Ort klonen + Umgebungsvariable
-
-```powershell
-$env:OPENCODE_CONFIG_DIR = "D:\path\to\opencode-config"
-opencode
-```
+> **Kompatibilitätshinweis**: `~/.config/opencode` ist der standardmäßige globale Konfigurationspfad von OpenCode. Die Konfigurationsdateien befinden sich im Unterverzeichnis `opencode/` dieses Repositorys und folgen vollständig den OpenCode-Konventionen — durch Verweis via Umgebungsvariable oder symbolischen Link werden sie automatisch erkannt.
 
 ### Installation überprüfen
 
@@ -232,41 +252,43 @@ Der Kernansatz orientiert sich an [oh-my-openagent](https://github.com/code-yeon
 ## Repository-Struktur
 
 ```text
-├── .ai/
-│   └── calibration.yml           # Code-Review Schweregrad-Kalibrierung
-├── agents/                       # 10 spezialisierte Agenten
-│   ├── orchestrator.md           # Haupteinstieg: Intent Gate + modellbewusstes Routing
-│   ├── planner.md                # Pro: Architektur & Planung
-│   ├── deep-worker.md            # Pro: Heavy-Implementierung
-│   ├── oracle.md                 # Pro: Tiefgehende Code-Analyse (nur Lesen)
-│   ├── reviewer.md               # Pro: Zweiachsiges Code-Review (nur Lesen)
-│   ├── consultant.md             # Pro: Lösungsdiskussion & Beratung
-│   ├── ui-builder.md             # Pro: Frontend & UI
-│   ├── explore.md                # Flash: Codebase-Suche (nur Lesen)
-│   ├── librarian.md              # Flash: Externe Recherche (nur Lesen)
-│   └── light-orchestrator.md     # Flash: Einfache Bearbeitungen
-├── skills/                       # 16 On-Demand-Skills
-│   ├── code-review/              # Zweiachsiges paralleles Review + Schweregrad-Kalibrierung
-│   ├── codemap/                  # Repository-Strukturdiagramm generieren
-│   ├── gh-cli/                   # GitHub CLI v2.96+-Referenz
-│   ├── git-master/               # Fortgeschrittene Git-Operationen
-│   ├── git-release/              # Tag-Release
-│   ├── handoff/                  # Sitzung in Übergabedokument komprimieren
-│   ├── opencode-config/          # Meta-Skill: Konfiguration dieses Repositories
-│   ├── reflect/                  # Kontinuierliche Verbesserung
-│   ├── remove-deadcode/          # Toten Code erkennen & löschen
-│   ├── security-review/          # Sicherheitsaudit-Checkliste
-│   ├── shared-language/          # Domänen-Glossar (spart Token)
-│   ├── simplify/                 # Verhaltenserhaltende Code-Vereinfachung
-│   ├── spec-workflow/            # Spezifikationsgetriebene Entwicklung
-│   ├── verification-planning/    # Verifikationspfad-Planung vor Implementierung
-│   ├── verify-with-docs/         # Retrieval-First API-Verifikation
-│   └── writing-great-skills/     # Skill-Authoring-Richtlinien
-├── opencode.jsonc                # Hauptkonfiguration (18 Befehle)
-├── AGENTS.md                     # Globale Regeln (~212 Zeilen)
-├── dcp.jsonc                     # DCP-Kontextkomprimierung (DeepSeek 128K)
+├── opencode/                     # OpenCode-Konfigurationsdateien
+│   ├── .ai/
+│   │   └── calibration.yml           # Code-Review Schweregrad-Kalibrierung
+│   ├── agents/                       # 10 spezialisierte Agenten
+│   │   ├── orchestrator.md           # Haupteinstieg: Intent Gate + modellbewusstes Routing
+│   │   ├── planner.md                # Pro: Architektur & Planung
+│   │   ├── deep-worker.md            # Pro: Heavy-Implementierung
+│   │   ├── oracle.md                 # Pro: Tiefgehende Code-Analyse (nur Lesen)
+│   │   ├── reviewer.md               # Pro: Zweiachsiges Code-Review (nur Lesen)
+│   │   ├── consultant.md             # Pro: Lösungsdiskussion & Beratung
+│   │   ├── ui-builder.md             # Pro: Frontend & UI
+│   │   ├── explore.md                # Flash: Codebase-Suche (nur Lesen)
+│   │   ├── librarian.md              # Flash: Externe Recherche (nur Lesen)
+│   │   └── light-orchestrator.md     # Flash: Einfache Bearbeitungen
+│   ├── skills/                       # 16 On-Demand-Skills
+│   │   ├── code-review/              # Zweiachsiges paralleles Review + Schweregrad-Kalibrierung
+│   │   ├── codemap/                  # Repository-Strukturdiagramm generieren
+│   │   ├── gh-cli/                   # GitHub CLI v2.96+-Referenz
+│   │   ├── git-master/               # Fortgeschrittene Git-Operationen
+│   │   ├── git-release/              # Tag-Release
+│   │   ├── handoff/                  # Sitzung in Übergabedokument komprimieren
+│   │   ├── opencode-config/          # Meta-Skill: Konfiguration dieses Repositories
+│   │   ├── reflect/                  # Kontinuierliche Verbesserung
+│   │   ├── remove-deadcode/          # Toten Code erkennen & löschen
+│   │   ├── security-review/          # Sicherheitsaudit-Checkliste
+│   │   ├── shared-language/          # Domänen-Glossar (spart Token)
+│   │   ├── simplify/                 # Verhaltenserhaltende Code-Vereinfachung
+│   │   ├── spec-workflow/            # Spezifikationsgetriebene Entwicklung
+│   │   ├── verification-planning/    # Verifikationspfad-Planung vor Implementierung
+│   │   ├── verify-with-docs/         # Retrieval-First API-Verifikation
+│   │   └── writing-great-skills/     # Skill-Authoring-Richtlinien
+│   ├── opencode.jsonc                # Hauptkonfiguration (18 Befehle)
+│   ├── AGENTS.md                     # Globale Regeln (~212 Zeilen)
+│   └── dcp.jsonc                     # DCP-Kontextkomprimierung (DeepSeek 128K)
+├── README.md
 ├── LICENSE
-└── README.md
+└── README.*.md
 ```
 
 ## Benutzerhandbuch

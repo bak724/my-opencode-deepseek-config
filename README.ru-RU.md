@@ -76,29 +76,49 @@ opencode
 
 ## Установка и развёртывание
 
-### Способ 1: Клонирование в глобальный каталог конфигурации (рекомендуется)
+### Способ 1: Клонирование + переменная окружения (рекомендуется, кроссплатформенно)
 
-**Windows (PowerShell):**
+```bash
+git clone https://github.com/znlgis/my-opencode-deepseek-config.git
+```
+
+Затем укажите `OPENCODE_CONFIG_DIR` на подкаталог `opencode/` внутри репозитория.
+
+**Windows (PowerShell)** —— постоянно:
+
+```powershell
+[Environment]::SetEnvironmentVariable("OPENCODE_CONFIG_DIR", "D:\path\to\my-opencode-deepseek-config\opencode", "User")
+```
+
+**Windows (PowerShell)** —— временно (только текущая сессия):
+
+```powershell
+$env:OPENCODE_CONFIG_DIR = "D:\path\to\my-opencode-deepseek-config\opencode"
+opencode
+```
+
+**Linux / macOS** —— добавить в `~/.bashrc` или `~/.zshrc`:
+
+```bash
+export OPENCODE_CONFIG_DIR="$HOME/path/to/my-opencode-deepseek-config/opencode"
+```
+
+### Способ 2: Символическая ссылка на глобальный каталог конфигурации
+
+**Windows (PowerShell, требуются права администратора):**
 
 ```powershell
 New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.config"
-git clone https://github.com/znlgis/my-opencode-deepseek-config.git "$env:USERPROFILE\.config\opencode"
+New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.config\opencode" -Target "D:\path\to\my-opencode-deepseek-config\opencode"
 ```
 
 **Linux / macOS:**
 
 ```bash
-git clone https://github.com/znlgis/my-opencode-deepseek-config.git ~/.config/opencode
+ln -s /path/to/my-opencode-deepseek-config/opencode ~/.config/opencode
 ```
 
-> **Примечание о совместимости**: `~/.config/opencode` — стандартный путь глобальной конфигурации OpenCode. Файлы `agents/`, `skills/`, `AGENTS.md` в этом репозитории следуют принятому в OpenCode макету и автоматически распознаются после клонирования без дополнительной настройки.
-
-### Способ 2: Клонирование в произвольное место + переменная окружения
-
-```powershell
-$env:OPENCODE_CONFIG_DIR = "D:\path\to\opencode-config"
-opencode
-```
+> **Примечание о совместимости**: `~/.config/opencode` — стандартный путь глобальной конфигурации OpenCode. Файлы конфигурации находятся в подкаталоге `opencode/` этого репозитория, их структура полностью соответствует соглашениям OpenCode — при указании через переменную окружения или символическую ссылку они распознаются автоматически.
 
 ### Проверка установки
 
@@ -232,41 +252,43 @@ OpenCode предоставляет навыки по требованию че�
 ## Структура репозитория
 
 ```text
-├── .ai/
-│   └── calibration.yml           # Калибровка серьёзности code-review
-├── agents/                       # 10 специализированных агентов
-│   ├── orchestrator.md           # Точка входа: шлюз намерений + маршрутизация с учётом модели
-│   ├── planner.md                # pro: архитектура и планирование
-│   ├── deep-worker.md            # pro: сложная реализация
-│   ├── oracle.md                 # pro: глубокий анализ кода (только чтение)
-│   ├── reviewer.md               # pro: двухосевое код-ревью (только чтение)
-│   ├── consultant.md             # pro: обсуждение решений и рекомендации
-│   ├── ui-builder.md             # pro: фронтенд и UI
-│   ├── explore.md                # flash: поиск по кодовой базе (только чтение)
-│   ├── librarian.md              # flash: внешний поиск (только чтение)
-│   └── light-orchestrator.md     # flash: простые правки
-├── skills/                       # 16 навыков, загружаемых по требованию
-│   ├── code-review/              # Двухосевое параллельное ревью + калибровка серьёзности
-│   ├── codemap/                  # Генерация карты структуры репозитория
-│   ├── gh-cli/                   # Справочник GitHub CLI v2.96+
-│   ├── git-master/               # Продвинутые операции Git
-│   ├── git-release/              # Релиз с тегом
-│   ├── handoff/                  # Сжатие сессии в документ передачи
-│   ├── opencode-config/          # Мета-навык: создание конфигурации этого репозитория
-│   ├── reflect/                  # Непрерывное улучшение
-│   ├── remove-deadcode/          # Обнаружение и удаление мёртвого кода
-│   ├── security-review/          # Чек-лист аудита безопасности
-│   ├── shared-language/          # Глоссарий предметной области (экономия токенов)
-│   ├── simplify/                 # Поведенчески-сохраняющее упрощение кода
-│   ├── spec-workflow/            # Разработка по спецификации
-│   ├── verification-planning/    # Планирование пути верификации перед реализацией
-│   ├── verify-with-docs/         # Приоритетная сверка с API-документацией
-│   └── writing-great-skills/     # Стандарт написания навыков
-├── opencode.jsonc                # Основная конфигурация (18 команд)
-├── AGENTS.md                     # Глобальные правила (~212 строк)
-├── dcp.jsonc                     # Сжатие контекста DCP (DeepSeek 128K)
+├── opencode/                     # Конфигурационные файлы OpenCode
+│   ├── .ai/
+│   │   └── calibration.yml           # Калибровка серьёзности code-review
+│   ├── agents/                       # 10 специализированных агентов
+│   │   ├── orchestrator.md           # Точка входа: шлюз намерений + маршрутизация с учётом модели
+│   │   ├── planner.md                # pro: архитектура и планирование
+│   │   ├── deep-worker.md            # pro: сложная реализация
+│   │   ├── oracle.md                 # pro: глубокий анализ кода (только чтение)
+│   │   ├── reviewer.md               # pro: двухосевое код-ревью (только чтение)
+│   │   ├── consultant.md             # pro: обсуждение решений и рекомендации
+│   │   ├── ui-builder.md             # pro: фронтенд и UI
+│   │   ├── explore.md                # flash: поиск по кодовой базе (только чтение)
+│   │   ├── librarian.md              # flash: внешний поиск (только чтение)
+│   │   └── light-orchestrator.md     # flash: простые правки
+│   ├── skills/                       # 16 навыков, загружаемых по требованию
+│   │   ├── code-review/              # Двухосевое параллельное ревью + калибровка серьёзности
+│   │   ├── codemap/                  # Генерация карты структуры репозитория
+│   │   ├── gh-cli/                   # Справочник GitHub CLI v2.96+
+│   │   ├── git-master/               # Продвинутые операции Git
+│   │   ├── git-release/              # Релиз с тегом
+│   │   ├── handoff/                  # Сжатие сессии в документ передачи
+│   │   ├── opencode-config/          # Мета-навык: создание конфигурации этого репозитория
+│   │   ├── reflect/                  # Непрерывное улучшение
+│   │   ├── remove-deadcode/          # Обнаружение и удаление мёртвого кода
+│   │   ├── security-review/          # Чек-лист аудита безопасности
+│   │   ├── shared-language/          # Глоссарий предметной области (экономия токенов)
+│   │   ├── simplify/                 # Поведенчески-сохраняющее упрощение кода
+│   │   ├── spec-workflow/            # Разработка по спецификации
+│   │   ├── verification-planning/    # Планирование пути верификации перед реализацией
+│   │   ├── verify-with-docs/         # Приоритетная сверка с API-документацией
+│   │   └── writing-great-skills/     # Стандарт написания навыков
+│   ├── opencode.jsonc                # Основная конфигурация (18 команд)
+│   ├── AGENTS.md                     # Глобальные правила (~212 строк)
+│   └── dcp.jsonc                     # Сжатие контекста DCP (DeepSeek 128K)
+├── README.md
 ├── LICENSE
-└── README.md
+└── README.*.md
 ```
 
 ## Руководство по использованию

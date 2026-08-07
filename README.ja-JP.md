@@ -76,29 +76,49 @@ Pro モデルで thinking/reasoning を有効にする場合、`provider` に以
 
 ## インストールとデプロイ
 
-### 方式一：グローバル設定ディレクトリへのクローン（推奨）
+### 方式一：クローン + 環境変数（推奨、クロスプラットフォーム対応）
 
-**Windows（PowerShell）：**
+```bash
+git clone https://github.com/znlgis/my-opencode-deepseek-config.git
+```
+
+その後、`OPENCODE_CONFIG_DIR` をリポジトリ内の `opencode/` サブディレクトリに向けるだけで使用できる。
+
+**Windows（PowerShell）** —— 恒久設定：
+
+```powershell
+[Environment]::SetEnvironmentVariable("OPENCODE_CONFIG_DIR", "D:\path\to\my-opencode-deepseek-config\opencode", "User")
+```
+
+**Windows（PowerShell）** —— 一時設定（現在のセッションのみ）：
+
+```powershell
+$env:OPENCODE_CONFIG_DIR = "D:\path\to\my-opencode-deepseek-config\opencode"
+opencode
+```
+
+**Linux / macOS** —— `~/.bashrc` または `~/.zshrc` に追記：
+
+```bash
+export OPENCODE_CONFIG_DIR="$HOME/path/to/my-opencode-deepseek-config/opencode"
+```
+
+### 方式二：シンボリックリンクでグローバル設定ディレクトリへ
+
+**Windows（PowerShell、管理者権限が必要）：**
 
 ```powershell
 New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.config"
-git clone https://github.com/znlgis/my-opencode-deepseek-config.git "$env:USERPROFILE\.config\opencode"
+New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.config\opencode" -Target "D:\path\to\my-opencode-deepseek-config\opencode"
 ```
 
 **Linux / macOS：**
 
 ```bash
-git clone https://github.com/znlgis/my-opencode-deepseek-config.git ~/.config/opencode
+ln -s /path/to/my-opencode-deepseek-config/opencode ~/.config/opencode
 ```
 
-> **互換性に関する注意**：`~/.config/opencode` は OpenCode の標準グローバル設定パスである。本リポジトリの `agents/`、`skills/`、`AGENTS.md` 等のファイルは OpenCode の規約に従ったレイアウトであり、クローン後は追加設定なしで自動認識される。
-
-### 方式二：任意の場所へクローン + 環境変数
-
-```powershell
-$env:OPENCODE_CONFIG_DIR = "D:\path\to\opencode-config"
-opencode
-```
+> **互換性に関する注意**：`~/.config/opencode` は OpenCode の標準グローバル設定パスである。本リポジトリの `opencode/` サブディレクトリには `agents/`、`skills/`、`AGENTS.md` 等のファイルが含まれており、そのレイアウトは完全に OpenCode の規約に従っている。環境変数またはシンボリックリンクで指定すれば自動認識される。
 
 ### インストールの検証
 
@@ -232,41 +252,43 @@ OpenCode はネイティブ `skill` ツールを通じてスキルをオンデ�
 ## リポジトリ構造
 
 ```text
-├── .ai/
-│   └── calibration.yml           # code-review 重大度キャリブレーション
-├── agents/                       # 10 個の専任エージェント
-│   ├── orchestrator.md           # メインエントリ：意図ゲーティング + モデル認識ルーティング
-│   ├── planner.md                # pro：アーキテクチャと計画
-│   ├── deep-worker.md            # pro：重量級実装
-│   ├── oracle.md                 # pro：深層コード解析（読み取り専用）
-│   ├── reviewer.md               # pro：二軸コードレビュー（読み取り専用）
-│   ├── consultant.md             # pro：方式検討と提案
-│   ├── ui-builder.md             # pro：フロントエンドと UI
-│   ├── explore.md                # flash：コードベース検索（読み取り専用）
-│   ├── librarian.md              # flash：外部検索（読み取り専用）
-│   └── light-orchestrator.md     # flash：単純編集
-├── skills/                       # 16 個のオンデマンドスキル
-│   ├── code-review/              # 二軸並行レビュー + 重大度キャリブレーション
-│   ├── codemap/                  # リポジトリ構造図の生成
-│   ├── gh-cli/                   # GitHub CLI v2.96+ リファレンス
-│   ├── git-master/               # 高度な Git 操作
-│   ├── git-release/              # タグリリース
-│   ├── handoff/                  # セッションを引継ぎドキュメントに圧縮
-│   ├── opencode-config/          # メタスキル：本リポジトリ設定の作成
-│   ├── reflect/                  # 継続的改善
-│   ├── remove-deadcode/          # デッドコード検出と削除
-│   ├── security-review/          # セキュリティレビューチェックリスト
-│   ├── shared-language/          # ドメイン用語集（トークン節約）
-│   ├── simplify/                 # 振る舞いを保持したコード簡略化
-│   ├── spec-workflow/            # 仕様駆動開発
-│   ├── verification-planning/    # 実装前検証パス計画
-│   ├── verify-with-docs/         # 検索優先 API 検証
-│   └── writing-great-skills/     # スキル作成規約
-├── opencode.jsonc                # メイン設定（18 コマンド）
-├── AGENTS.md                     # グローバルルール（~212 行）
-├── dcp.jsonc                     # DCP コンテキスト圧縮（DeepSeek 128K）
+├── opencode/                     # OpenCode 設定ディレクトリ（独立デプロイ可能）
+│   ├── .ai/
+│   │   └── calibration.yml       # code-review 重大度キャリブレーション
+│   ├── agents/                   # 10 個の専任エージェント
+│   │   ├── orchestrator.md       # メインエントリ：意図ゲーティング + モデル認識ルーティング
+│   │   ├── planner.md            # pro：アーキテクチャと計画
+│   │   ├── deep-worker.md        # pro：重量級実装
+│   │   ├── oracle.md             # pro：深層コード解析（読み取り専用）
+│   │   ├── reviewer.md           # pro：二軸コードレビュー（読み取り専用）
+│   │   ├── consultant.md         # pro：方式検討と提案
+│   │   ├── ui-builder.md         # pro：フロントエンドと UI
+│   │   ├── explore.md            # flash：コードベース検索（読み取り専用）
+│   │   ├── librarian.md          # flash：外部検索（読み取り専用）
+│   │   └── light-orchestrator.md # flash：単純編集
+│   ├── skills/                   # 16 個のオンデマンドスキル
+│   │   ├── code-review/          # 二軸並行レビュー + 重大度キャリブレーション
+│   │   ├── codemap/              # リポジトリ構造図の生成
+│   │   ├── gh-cli/               # GitHub CLI v2.96+ リファレンス
+│   │   ├── git-master/           # 高度な Git 操作
+│   │   ├── git-release/          # タグリリース
+│   │   ├── handoff/              # セッションを引継ぎドキュメントに圧縮
+│   │   ├── opencode-config/      # メタスキル：本リポジトリ設定の作成
+│   │   ├── reflect/              # 継続的改善
+│   │   ├── remove-deadcode/      # デッドコード検出と削除
+│   │   ├── security-review/      # セキュリティレビューチェックリスト
+│   │   ├── shared-language/      # ドメイン用語集（トークン節約）
+│   │   ├── simplify/             # 振る舞いを保持したコード簡略化
+│   │   ├── spec-workflow/        # 仕様駆動開発
+│   │   ├── verification-planning/ # 実装前検証パス計画
+│   │   ├── verify-with-docs/     # 検索優先 API 検証
+│   │   └── writing-great-skills/ # スキル作成規約
+│   ├── opencode.jsonc            # メイン設定（18 コマンド）
+│   ├── AGENTS.md                 # グローバルルール（~212 行）
+│   └── dcp.jsonc                 # DCP コンテキスト圧縮（DeepSeek 128K）
+├── README.md
 ├── LICENSE
-└── README.md
+└── README.*.md
 ```
 
 ## 利用ガイド
