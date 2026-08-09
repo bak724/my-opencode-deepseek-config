@@ -14,7 +14,7 @@
 - 권한 기준: 기본 허용, 파괴적 bash 명령은 `ask`로 설정; `.env`류 민감 파일은 `deny`; 외부 디렉터리는 `ask`
 - 컨텍스트 압축: DCP 능동 압축(35K-75K 임계값) + OpenCode 네이티브 compaction 백업
 - 전역 규칙: `AGENTS.md`(핵심 원칙, 작업 거부 계약, 컨텍스트와 토큰 효율성, 자체 검증, 안티 패턴 등)
-- 스킬: `skills/` 디렉터리 아래 **16개** `SKILL.md` 스킬, 네이티브 `skill` 도구를 통해 필요 시 로드
+- 스킬: `skills/` 디렉터리 아래 **17개** `SKILL.md` 스킬, 네이티브 `skill` 도구를 통해 필요 시 로드
 - 플러그인: `superpowers`(14개 프로세스형 스킬), `@tarquinen/opencode-dcp`(지능형 컨텍스트 가지치기)
 - 실험 기능: `batch_tool` 기본 활성화
 
@@ -214,9 +214,10 @@ OpenCode는 네이티브 `skill` 도구를 통해 필요 시 스킬을 노출합
 | --- | --- |
 | `code-review` | 이중 축 병렬 리뷰(규범 + 스펙) + 심각도 보정 |
 | `codemap` | 주석이 포함된 저장소 구조도 생성, 탐색 토큰 절약 |
-| `gh-cli` | GitHub CLI v2.96+ 전체 참조(Issues 2.0, copilot, agent-task, gh skill) |
+| `gh-cli` | GitHub CLI v2.97+ 전체 참조(Issues 2.0, copilot, agent-task, gh skill) |
 | `git-master` | 고급 Git 작업: rebase, squash, bisect, reflog, worktree |
 | `git-release` | 태그 릴리스: SemVer 추론, 릴리스 노트, gh release 명령 |
+| `resolving-merge-conflicts` | hunk별 병합 충돌 해결: 원래 의도 추적, 새로운 동작 발명 금지, 절대 --abort 사용 안 함 |
 | `handoff` | 세션을 인수인계 문서로 압축(경로 참조, 내용 복사 안 함) |
 | `opencode-config` | OpenCode 구성 작성 및 유지 관리 |
 | `reflect` | 지속적 개선: 마찰 발견 → 최소 수정 제안 |
@@ -231,7 +232,7 @@ OpenCode는 네이티브 `skill` 도구를 통해 필요 시 스킬을 노출합
 
 ## 설계 결정과 반복 기록
 
-핵심 아이디어는 [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent)(의도 게이트, 읽기 전용 격리, 안티 패턴), [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim)(스케줄러 우선, 폴백 체인, 거부 계약), [anomalyco/opencode](https://github.com/anomalyco/opencode)(구성 스키마, 스킬 체계), [cli/cli](https://github.com/cli/cli)(gh 전체 명령 집합), [OpenSpec](https://github.com/Fission-AI/OpenSpec)(델타 스펙, 변경 제안서 업데이트), [mattpocock/skills](https://github.com/mattpocock/skills)(인수인계 문서, 구조화된 디버깅), [pi](https://github.com/earendil-works/pi)(먼저 답변 후 수정, 간결한 응답), [deepreview](https://github.com/mechanai/deepreview)(엔트로피 스캔, 수렴 검사)의 장점을 참고하였으며, 순수 구성으로 구현, 추가 의존성 없음.
+핵심 아이디어는 [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent)(의도 게이트, 읽기 전용 격리, 안티 패턴), [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim)(스케줄러 우선, 폴백 체인, 거부 계약), [anomalyco/opencode](https://github.com/anomalyco/opencode)(구성 스키마, 스킬 체계), [cli/cli](https://github.com/cli/cli)(gh v2.97), [OpenSpec](https://github.com/Fission-AI/OpenSpec)(델타 스펙, 변경 제안서 업데이트), [mattpocock/skills](https://github.com/mattpocock/skills)(인수인계 문서, 구조화된 디버깅), [pi](https://github.com/earendil-works/pi)(먼저 답변 후 수정, 간결한 응답), [deepreview](https://github.com/mechanai/deepreview)(novelty-based convergence), conflict resolution discipline의 장점을 참고하였으며, 순수 구성으로 구현, 추가 의존성 없음.
 
 > **참고하되 그대로 베끼지 않음**: 지나치게 무거운 파이프라인은 경량 설계 이념만 추출합니다. 중복 기능은 기존 agents/skills가 커버하며, 새로 추가하지 않습니다. "추가보다 간소화 우선" 원칙을 따르며, 매 반복마다 토큰 순감소를 목표로 합니다.
 
@@ -248,6 +249,7 @@ OpenCode는 네이티브 `skill` 도구를 통해 필요 시 스킬을 노출합
 | **v21(전면 다이어트 리팩터링)** | 스킬 18→17(deepwork/conventional-commits/diagnose 제거, writing-great-skills/shared-language 추가); 명령 29→18(-38%); AGENTS.md 227→212줄(-7%); 스킬 문장별 no-op 가지치기. code-review 이중 축 병렬 + 보정 파일 메커니즘. pi/deepreview/mattpocock 등 6개 저장소 실전 경험 참고. |
 | **v22(스키마 검증 다이어트)** | OpenCode 및 DCP 공식 스키마 검증: 무효한 `agent.fallback` 데드 키 삭제; `dcp.jsonc` 모든 키 유효 확인(v3.1.14), 변경 없이 맹목적 추가 금지; AGENTS.md '토큰 효율성'을 '컨텍스트 관리'로 병합 및 전체 중복 제거, `Self-Verification` dangling 참조 수정(212→197줄); orchestrator 세 개 라우팅 테이블 병합(128→79줄, -38%, Intent Gate/Agent Directory/Fallback 모두 보존); 14개 스킬에서 파서가 무시하는 `license/compatibility/metadata` frontmatter 제거(-70줄); `tool_output` 능동적 토큰 절약 하향 조정(1500줄/40KB). |
 | **v23(이중 규율 통합+간소화 병합)** | 6개 업스트림 저장소 최종 통합: `gh-skill` 삭제(기능 `gh-cli` Agent Skills 절로 병합, -122줄); `verification-planning` 데드 참조 수정; AGENTS.md에 Pi 영감 이중 규율(먼저 답변 후 수정+입장 표명) + slim 위임 계약+잡 보드 + deepreview 파일 IPC 추가(+15줄); orchestrator 테이블 Pro/Flash 하위 테이블로 재구성, 79→86; reviewer에 검증자 기본 거부 입장 추가(+6줄); gh-cli Agent Skills 절 강화(+10줄). 순감소 ~90줄, skills 17→16. |
+| **v24(병합 충돌 해결+gh 업데이트)** | `resolving-merge-conflicts` 스킬 추가(hunk별 충돌 해결 규율); `gh-cli` v2.96→v2.97 업데이트; deepreview 용어 정비(엔트로피 스캔→novelty-based convergence); 설계 결정 문단에 conflict resolution discipline 참조 추가. skills 16→17. |
 
 ## 저장소 구조
 
@@ -266,16 +268,17 @@ OpenCode는 네이티브 `skill` 도구를 통해 필요 시 스킬을 노출합
 │   │   ├── explore.md            # flash: 코드베이스 검색(읽기 전용)
 │   │   ├── librarian.md          # flash: 외부 검색(읽기 전용)
 │   │   └── light-orchestrator.md # flash: 간단한 편집
-│   ├── skills/                   # 16개 필요 시 로드 스킬
+│   ├── skills/                   # 17개 필요 시 로드 스킬
 │   │   ├── code-review/          # 이중 축 병렬 리뷰 + 심각도 보정
 │   │   ├── codemap/              # 저장소 구조도 생성
-│   │   ├── gh-cli/               # GitHub CLI v2.96+ 참조
+│   │   ├── gh-cli/               # GitHub CLI v2.97+ 참조
 │   │   ├── git-master/           # 고급 Git 작업
 │   │   ├── git-release/          # 태그 릴리스
 │   │   ├── handoff/              # 세션을 인수인계 문서로 압축
 │   │   ├── opencode-config/      # 메타 스킬: 본 저장소 구성 작성
 │   │   ├── reflect/              # 지속적 개선
 │   │   ├── remove-deadcode/      # 데드 코드 감지 및 삭제
+│   │   ├── resolving-merge-conflicts/ # hunk별 병합 충돌 해결 규율
 │   │   ├── security-review/      # 보안 감사 체크리스트
 │   │   ├── shared-language/      # 도메인 용어집(토큰 절약)
 │   │   ├── simplify/             # 동작 유지 코드 단순화

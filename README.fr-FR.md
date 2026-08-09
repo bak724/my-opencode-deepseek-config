@@ -14,7 +14,7 @@
 - Base de permissions : autorisation par défaut, commandes bash destructrices réglées sur `ask` ; fichiers sensibles de type `.env` réglés sur `deny` ; répertoires externes réglés sur `ask`
 - Compression de contexte : compression proactive DCP (seuils 35K-75K) + compaction native OpenCode en filet de sécurité
 - Règles globales : `AGENTS.md` (principes fondamentaux, contrat de refus de tâche, contexte et efficacité des tokens, auto-vérification, anti-patterns, etc.)
-- Compétences : **16** `SKILL.md` dans le répertoire `skills/`, chargées à la demande via l'outil `skill` natif
+- Compétences : **17** `SKILL.md` dans le répertoire `skills/`, chargées à la demande via l'outil `skill` natif
 - Plugins : `superpowers` (14 compétences orientées processus), `@tarquinen/opencode-dcp` (élagage intelligent du contexte)
 - Fonctionnalités expérimentales : `batch_tool` activé par défaut
 
@@ -214,9 +214,10 @@ OpenCode expose les compétences à la demande via l'outil `skill` natif — les
 | --- | --- |
 | `code-review` | Revue parallèle sur deux axes (conventions + spécifications) + calibration de sévérité |
 | `codemap` | Générer une carte annotée de la structure du dépôt, économisant des tokens d'exploration |
-| `gh-cli` | Référence complète GitHub CLI v2.96+ (Issues 2.0, copilot, agent-task, gh skill) |
+| `gh-cli` | Référence complète GitHub CLI v2.97+ (Issues 2.0, copilot, agent-task, gh skill) |
 | `git-master` | Opérations Git avancées : rebase, squash, bisect, reflog, worktree |
 | `git-release` | Release avec tag : inférence SemVer, notes de release, commande gh release |
+| `resolving-merge-conflicts` | Résoudre les conflits de merge par hunk : tracer l'intention originale, ne jamais inventer de comportement, jamais --abort |
 | `handoff` | Compresser la session en document de passation (référence par chemin, pas de copie de contenu) |
 | `opencode-config` | Rédiger et maintenir la configuration OpenCode |
 | `reflect` | Amélioration continue : détecter les frictions → proposer des corrections minimales |
@@ -231,7 +232,7 @@ OpenCode expose les compétences à la demande via l'outil `skill` natif — les
 
 ## Décisions de conception et historique des itérations
 
-L'approche fondamentale s'inspire des meilleures pratiques de [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent) (filtrage d'intention, isolation lecture seule, anti-patterns), [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim) (priorité au planificateur, chaîne de repli, contrat de refus), [anomalyco/opencode](https://github.com/anomalyco/opencode) (schéma de configuration, système de compétences), [cli/cli](https://github.com/cli/cli) (ensemble complet de commandes gh), [OpenSpec](https://github.com/Fission-AI/OpenSpec) (spécifications delta, mise à jour des propositions de changement), [mattpocock/skills](https://github.com/mattpocock/skills) (document de passation, débogage structuré), [pi](https://github.com/earendil-works/pi) (répondre d'abord puis modifier, réponses concises) et [deepreview](https://github.com/mechanai/deepreview) (scan d'entropie, vérification de convergence). Implémentation purement via configuration, zéro dépendance supplémentaire.
+L'approche fondamentale s'inspire des meilleures pratiques de [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent) (filtrage d'intention, isolation lecture seule, anti-patterns), [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim) (priorité au planificateur, chaîne de repli, contrat de refus), [anomalyco/opencode](https://github.com/anomalyco/opencode) (schéma de configuration, système de compétences), [cli/cli](https://github.com/cli/cli) (ensemble complet de commandes gh), [OpenSpec](https://github.com/Fission-AI/OpenSpec) (spécifications delta, mise à jour des propositions de changement), [mattpocock/skills](https://github.com/mattpocock/skills) (document de passation, débogage structuré, résolution de conflits de merge), [pi](https://github.com/earendil-works/pi) (répondre d'abord puis modifier, réponses concises) et [deepreview](https://github.com/mechanai/deepreview) (convergence basée sur la nouveauté, scan mécanique). Implémentation purement via configuration, zéro dépendance supplémentaire.
 
 > **S'inspirer, pas copier** : des pipelines trop lourds, seuls les concepts de conception légers sont extraits ; les fonctionnalités redondantes sont couvertes par les agents/compétences existants, sans en ajouter de nouvelles. Suivant le principe « simplifier plutôt qu'ajouter », chaque itération vise une réduction nette des tokens.
 
@@ -248,6 +249,7 @@ L'approche fondamentale s'inspire des meilleures pratiques de [oh-my-openagent](
 | **v21 (Refactorisation d'amaigrissement complet)** | Compétences 18→17 (suppression de deepwork/conventional-commits/diagnose, ajout de writing-great-skills/shared-language) ; commandes 29→18 (-38%) ; AGENTS.md 227→212 lignes (-7%) ; élagage no-op phrase par phrase des compétences. code-review parallèle sur deux axes + mécanisme de fichier de calibration. Intégration de l'expérience pratique de 6 dépôts dont pi/deepreview/mattpocock. |
 | **v22 (Amaigrissement par validation de schéma)** | Vérification des schémas officiels OpenCode et DCP : suppression de la clé morte `agent.fallback` ; confirmation que toutes les clés de `dcp.jsonc` sont valides (v3.1.14), zéro modification sans validation ; AGENTS.md fusion de « Efficacité des tokens » dans « Gestion du contexte » avec déduplication complète, correction de la référence pendante `Self-Verification` (212→197 lignes) ; orchestrator fusion de trois tables de routage (128→79 lignes, -38%, Intent Gate/Agent Directory/Fallback tous conservés) ; 14 compétences débarrassées du frontmatter `license/compatibility/metadata` ignoré par le parseur (-70 lignes) ; `tool_output` réduit pour économiser proactivement les tokens (1500 lignes/40 Ko). |
 | **v23 (Intégration des deux disciplines + fusion et simplification)** | Intégration finale basée sur 6 dépôts upstream : suppression de `gh-skill` (fonctionnalité fusionnée dans la section Agent Skills de `gh-cli`, -122 lignes) ; correction de la référence morte `verification-planning` ; AGENTS.md ajout des deux disciplines inspirées de Pi (répondre d'abord puis modifier + prise de position, brièveté globale) + contrat de délégation slim + job board + IPC fichier deepreview (+15 lignes) ; table orchestrator dédupliquée de la colonne modèle (restructuré en sous-tableaux Pro/Flash, 79→86) ; reviewer ajout de la position de refus par défaut du vérificateur (+6 lignes) ; section Agent Skills de gh-cli renforcée (+10 lignes). Réduction nette ~90 lignes, compétences 17→16. |
+| **v24 (Résolution de conflits + mise à jour tooling)** | Ajout de la compétence `resolving-merge-conflicts` (résolution de conflits guidée par hunk, traçage de l'intention originale) ; gh-cli mis à jour v2.96→v2.97 ; compétences 16→17. |
 
 ## Structure du dépôt
 
@@ -266,12 +268,13 @@ L'approche fondamentale s'inspire des meilleures pratiques de [oh-my-openagent](
 │   │   ├── explore.md                # flash : recherche dans le code source (lecture seule)
 │   │   ├── librarian.md              # flash : recherche externe (lecture seule)
 │   │   └── light-orchestrator.md     # flash : modifications simples
-│   ├── skills/                       # 16 compétences chargées à la demande
+│   ├── skills/                       # 17 compétences chargées à la demande
 │   │   ├── code-review/              # Revue parallèle sur deux axes + calibration de sévérité
 │   │   ├── codemap/                  # Génération de carte de structure de dépôt
-│   │   ├── gh-cli/                   # Référence GitHub CLI v2.96+
+│   │   ├── gh-cli/                   # Référence GitHub CLI v2.97+
 │   │   ├── git-master/               # Opérations Git avancées
 │   │   ├── git-release/              # Release avec tag
+│   │   ├── resolving-merge-conflicts/ # Résolution de conflits de merge par hunk
 │   │   ├── handoff/                  # Compression de session en document de passation
 │   │   ├── opencode-config/          # Méta-compétence : rédaction de configuration de ce dépôt
 │   │   ├── reflect/                  # Amélioration continue

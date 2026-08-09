@@ -14,7 +14,7 @@
 - Permission baseline: allow by default, destructive bash commands set to `ask`; `.env`-like sensitive files set to `deny`; external directories set to `ask`
 - Context compression: DCP proactive compression (35K-75K threshold) + OpenCode native compaction fallback
 - Global rules: `AGENTS.md` (core principles, task rejection contract, context & token efficiency, self-verification, anti-patterns, etc.)
-- Skills: **16** `SKILL.md` files in the `skills/` directory, loaded on-demand via the native `skill` tool
+- Skills: **17** `SKILL.md` files in the `skills/` directory, loaded on-demand via the native `skill` tool
 - Plugins: `superpowers` (14 process-type skills), `@tarquinen/opencode-dcp` (intelligent context trimming)
 - Experimental features: `batch_tool` is enabled by default
 
@@ -214,9 +214,10 @@ OpenCode exposes skills on-demand via the native `skill` tool—Agents only load
 | --- | --- |
 | `code-review` | Dual-axis parallel review (specifications + conventions) + severity calibration |
 | `codemap` | Generates annotated repository structure maps to save exploration tokens |
-| `gh-cli` | Comprehensive reference for GitHub CLI v2.96+ (Issues 2.0, copilot, agent-task, gh skill) |
+| `gh-cli` | Comprehensive reference for GitHub CLI v2.97+ (Issues 2.0, copilot, agent-task, gh skill, project by-name) |
 | `git-master` | Advanced Git operations: rebase, squash, bisect, reflog, worktree |
 | `git-release` | Tag releases: SemVer inference, release notes, gh release commands |
+| `resolving-merge-conflicts` | Resolve merge conflicts per-hunk: trace original intent, never invent behavior, never --abort |
 | `handoff` | Compress sessions into handoff documents (path references, no content duplication) |
 | `opencode-config` | Write and maintain OpenCode configurations |
 | `reflect` | Continuous improvement: identify friction → propose minimal fixes |
@@ -231,7 +232,7 @@ OpenCode exposes skills on-demand via the native `skill` tool—Agents only load
 
 ## Design Decisions & Iteration History
 
-Core concepts draw inspiration from [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent) (intent gate, read-only isolation, anti-patterns), [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim) (scheduler priority, fallback chain, rejection contract), [anomalyco/opencode](https://github.com/anomalyco/opencode) (configuration Schema, skill system), [cli/cli](https://github.com/cli/cli) (full gh command set), [OpenSpec](https://github.com/Fission-AI/OpenSpec) (delta specs, change proposal updates), [mattpocock/skills](https://github.com/mattpocock/skills) (handoff docs, structured debugging), [pi](https://github.com/earendil-works/pi) (answer first, modify later, concise responses), and [deepreview](https://github.com/mechanai/deepreview) (entropy scanning, convergence checks). All implemented purely via configuration with zero extra dependencies.
+Core concepts draw inspiration from [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent) (intent gate, read-only isolation, anti-patterns), [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim) (scheduler priority, fallback chain, rejection contract), [anomalyco/opencode](https://github.com/anomalyco/opencode) (configuration Schema, skill system), [cli/cli](https://github.com/cli/cli) (gh v2.97 full command set), [OpenSpec](https://github.com/Fission-AI/OpenSpec) (delta specs, change proposal updates), [mattpocock/skills](https://github.com/mattpocock/skills) (conflict resolution discipline, handoff docs), [pi](https://github.com/earendil-works/pi) (answer first, modify later, concise responses), and [deepreview](https://github.com/mechanai/deepreview) (novelty-based convergence, effective-size routing). All implemented purely via configuration with zero extra dependencies.
 
 > **Adapt, don't copy**: Heavy pipelines only contribute lightweight design concepts; redundant features are covered by existing agents/skills to avoid bloat. Adheres to the "refactor over add" principle, with each iteration aiming for a net reduction in tokens.
 
@@ -248,6 +249,7 @@ Core concepts draw inspiration from [oh-my-openagent](https://github.com/code-ye
 | **v21 (Comprehensive Slimming)** | Skills reduced from 18→17 (removed deepwork/conventional-commits/diagnose, added writing-great-skills/shared-language); commands reduced from 29→18 (-38%); AGENTS.md reduced from 227→212 lines (-7%); sentence-by-sentence no-op trimming on skills. Dual-axis parallel code-review + calibration file mechanism. Leveraged practical experience from 6 repos like pi/deepreview/mattpocock. |
 | **v22 (Schema Validation Slimming)** | Verified against official OpenCode & DCP schemas: removed invalid `agent.fallback` dead key; confirmed all `dcp.jsonc` keys are valid (v3.1.14), zero blind additions; merged 'Token Efficiency' into 'Context Management' in AGENTS.md, fully deduplicated, fixed dangling `Self-Verification` reference (212→197 lines); merged orchestrator's three routing tables (128→79 lines, -38%, Intent Gate/Agent Directory/Fallback all preserved); stripped ignored `license/compatibility/metadata` frontmatter from 14 skills (-70 lines); downgraded `tool_output` to proactive token savings (1500 lines/40KB). |
 | **v23 (Dual Discipline Integration + Merge Slimming)** | Final integration based on 6 upstream repos: removed `gh-skill` (functionality merged into `gh-cli` Agent Skills section, -122 lines); fixed `verification-planning` dead reference; AGENTS.md added two Pi-inspired disciplines (answer first then modify + state position, global brevity) + slim delegation contract + job board + deepreview file IPC (+15 lines); orchestrator table restructured into Pro/Flash sub-tables, 79→86; reviewer reinforced verifier default-reject stance (+6 lines); gh-cli Agent Skills section strengthened (+10 lines). Net reduction ~90 lines, skills 17→16. |
+| **v24 (Upstream v2.97 + Conflict Resolution)** | gh-cli fully upgraded to v2.97.0 (fixed 11 outdated items: gh skill/view/uninstall, agent-task signature, secret --app, telemetry deprecation, etc.); added `project` by-name editing, `issue develop`, `org list`, `label clone` commands; code-review: renamed entropy scan → Mechanical scan, enhanced convergence with converging/deadlocked/diverging triage; added `resolving-merge-conflicts` (from mattpocock/skills, ~200 tokens); calibration.yml now has 3 active downgrade rules. skills 16→17. |
 
 ## Repository Structure
 
@@ -266,16 +268,17 @@ Core concepts draw inspiration from [oh-my-openagent](https://github.com/code-ye
 │   │   ├── explore.md            # flash: codebase search (read-only)
 │   │   ├── librarian.md          # flash: external retrieval (read-only)
 │   │   └── light-orchestrator.md # flash: simple editing
-│   ├── skills/                   # 16 on-demand skills
+│   ├── skills/                   # 17 on-demand skills
 │   │   ├── code-review/          # dual-axis parallel review + severity calibration
 │   │   ├── codemap/              # generates repository structure map
-│   │   ├── gh-cli/               # GitHub CLI v2.96+ reference
+│   │   ├── gh-cli/               # GitHub CLI v2.97+ reference
 │   │   ├── git-master/           # advanced Git operations
 │   │   ├── git-release/          # Tag releases
 │   │   ├── handoff/              # compress sessions into handoff docs
 │   │   ├── opencode-config/      # meta-skill: config writing
 │   │   ├── reflect/              # continuous improvement
 │   │   ├── remove-deadcode/      # dead code detection & removal
+│   │   ├── resolving-merge-conflicts/ # per-hunk conflict resolution discipline
 │   │   ├── security-review/      # security review checklist
 │   │   ├── shared-language/      # domain glossary (saves tokens)
 │   │   ├── simplify/             # behavior-preserving code simplification

@@ -14,7 +14,7 @@
 - Baseline de permissões: permitir por padrão, comandos bash destrutivos configurados como `ask`; arquivos sensíveis como `.env` com `deny`; diretórios externos com `ask`
 - Compressão de contexto: compressão proativa via DCP (limiar 35K–75K) + compactação nativa do OpenCode como fallback
 - Regras globais: `AGENTS.md` (princípios fundamentais, contrato de recusa de tarefas, eficiência de contexto e tokens, autoverificação, antipadrões, etc.)
-- Skills: **16** arquivos `SKILL.md` no diretório `skills/`, carregados sob demanda pela ferramenta nativa `skill`
+- Skills: **17** arquivos `SKILL.md` no diretório `skills/`, carregados sob demanda pela ferramenta nativa `skill`
 - Plugins: `superpowers` (14 skills de processo), `@tarquinen/opencode-dcp` (poda inteligente de contexto)
 - Funcionalidades experimentais: `batch_tool` ativada por padrão
 
@@ -214,9 +214,10 @@ O OpenCode expõe skills sob demanda pela ferramenta nativa `skill` — os agent
 | --- | --- |
 | `code-review` | Revisão paralela em dois eixos (convenções + especificação) + calibração de severidade |
 | `codemap` | Gerar mapa anotado da estrutura do repositório, economizando tokens de exploração |
-| `gh-cli` | Referência completa do GitHub CLI v2.96+ (Issues 2.0, copilot, agent-task, gh skill) |
+| `gh-cli` | Referência completa do GitHub CLI v2.97+ (Issues 2.0, copilot, agent-task, gh skill) |
 | `git-master` | Operações avançadas de Git: rebase, squash, bisect, reflog, worktree |
 | `git-release` | Release com tag: inferência de SemVer, notas de release, comando gh release |
+| `resolving-merge-conflicts` | Resolver conflitos de merge por hunk: rastrear intenção original, nunca inventar comportamento, nunca --abort |
 | `handoff` | Compactar sessão em documento de transição (referência por caminho, sem copiar conteúdo) |
 | `opencode-config` | Escrever e manter configurações do OpenCode |
 | `reflect` | Melhoria contínua: identificar atritos → propor correções mínimas |
@@ -231,7 +232,7 @@ O OpenCode expõe skills sob demanda pela ferramenta nativa `skill` — os agent
 
 ## Decisões de design e registro de iterações
 
-A abordagem central foi inspirada nos pontos fortes de [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent) (gate de intenção, isolamento de somente leitura, antipadrões), [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim) (orquestrador prioritário, cadeia de fallback, contrato de recusa), [anomalyco/opencode](https://github.com/anomalyco/opencode) (schema de configuração, ecossistema de skills), [cli/cli](https://github.com/cli/cli) (conjunto completo de comandos gh), [OpenSpec](https://github.com/Fission-AI/OpenSpec) (delta specs, atualização de propostas de alteração), [mattpocock/skills](https://github.com/mattpocock/skills) (documentos de transição, depuração estruturada), [pi](https://github.com/earendil-works/pi) (responder primeiro, editar depois; respostas concisas) e [deepreview](https://github.com/mechanai/deepreview) (varredura de entropia, verificação de convergência). Implementação puramente por configuração, zero dependências adicionais.
+A abordagem central foi inspirada nos pontos fortes de [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent) (gate de intenção, isolamento de somente leitura, antipadrões), [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim) (orquestrador prioritário, cadeia de fallback, contrato de recusa), [anomalyco/opencode](https://github.com/anomalyco/opencode) (schema de configuração, ecossistema de skills), [cli/cli](https://github.com/cli/cli) (gh v2.97, conjunto completo de comandos), [OpenSpec](https://github.com/Fission-AI/OpenSpec) (delta specs, atualização de propostas de alteração), [mattpocock/skills](https://github.com/mattpocock/skills) (disciplina de resolução de conflitos, documentos de transição), [pi](https://github.com/earendil-works/pi) (responder primeiro, editar depois; respostas concisas) e [deepreview](https://github.com/mechanai/deepreview) (convergência baseada em novidade, roteamento por tamanho efetivo). Implementação puramente por configuração, zero dependências adicionais.
 
 > **Inspiração, não cópia**: pipelines excessivamente pesados tiveram apenas seus princípios de design leve absorvidos; funcionalidades redundantes são cobertas pelos agents/skills existentes, sem adições. Seguindo o princípio "enxugar antes de adicionar", cada iteração visa a redução líquida de tokens.
 
@@ -248,6 +249,7 @@ A abordagem central foi inspirada nos pontos fortes de [oh-my-openagent](https:/
 | **v21 (reestruturação e enxugamento completo)** | Skills 18→17 (remoção de deepwork/conventional-commits/diagnose, adição de writing-great-skills/shared-language); comandos 29→18 (-38%); AGENTS.md 227→212 linhas (-7%); poda de no-ops frase por frase nos skills. code-review com dois eixos paralelos + mecanismo de arquivo de calibração. Inspirado na experiência prática de 6 repositórios incluindo pi/deepreview/mattpocock. |
 | **v22 (validação de schema e enxugamento)** | Validação contra schemas oficiais do OpenCode e DCP: remoção da chave morta `agent.fallback`; confirmação de que todas as chaves em `dcp.jsonc` são válidas (v3.1.14), zero alterações sem necessidade; AGENTS.md com fusão de "Eficiência de tokens" em "Gerenciamento de contexto" e remoção completa de duplicações, correção de referência órfã em `Self-Verification` (212→197 linhas); orchestrator com fusão de três tabelas de roteamento (128→79 linhas, -38%, Intent Gate/Agent Directory/Fallback totalmente preservados); 14 skills tiveram frontmatter `license/compatibility/metadata` ignorado pelo parser removido (-70 linhas); `tool_output` reduzido para economia proativa de tokens (1500 linhas/40KB). |
 | **v23 (integração de duas disciplinas + fusão e enxugamento)** | Integração final baseada em 6 repositórios upstream: remoção de `gh-skill` (funcionalidade incorporada na seção Agent Skills do `gh-cli`, -122 linhas); correção de referência morta em `verification-planning`; AGENTS.md com duas disciplinas inspiradas no Pi (responder primeiro + declarar posição, concisão global) + contrato de delegação do slim + job board + IPC por arquivo do deepreview (+15 linhas); tabela do orchestrator reestruturada em subtabelas Pro/Flash, 79→86 linhas; reviewer com postura padrão de recusa do verificador (+6 linhas); seção Agent Skills do gh-cli reforçada (+10 linhas). Redução líquida de ~90 linhas, skills 17→16. |
+| **v24 (upstream v2.97 + resolução de conflitos)** | gh-cli totalmente atualizado para v2.97.0 (11 itens desatualizados corrigidos: gh skill/view/uninstall, assinatura agent-task, secret --app, descontinuação de telemetria, etc.); adicionados comandos `project` por nome, `issue develop`, `org list`, `label clone`; code-review: varredura de entropia renomeada → Mechanical scan, convergência aprimorada com triagem converging/deadlocked/diverging; adicionado `resolving-merge-conflicts` (do mattpocock/skills, ~200 tokens); calibration.yml agora com 3 regras de downgrade ativas. skills 16→17. |
 
 ## Estrutura do repositório
 
@@ -266,12 +268,13 @@ A abordagem central foi inspirada nos pontos fortes de [oh-my-openagent](https:/
 │   │   ├── explore.md            # flash: busca no codebase (somente leitura)
 │   │   ├── librarian.md          # flash: buscas externas (somente leitura)
 │   │   └── light-orchestrator.md # flash: edições simples
-│   ├── skills/                   # 16 skills carregadas sob demanda
+│   ├── skills/                   # 17 skills carregadas sob demanda
 │   │   ├── code-review/          # Revisão paralela em dois eixos + calibração de severidade
 │   │   ├── codemap/              # Gerar mapa da estrutura do repositório
-│   │   ├── gh-cli/               # Referência do GitHub CLI v2.96+
+│   │   ├── gh-cli/               # Referência do GitHub CLI v2.97+
 │   │   ├── git-master/           # Operações avançadas de Git
 │   │   ├── git-release/          # Release com tag
+│   │   ├── resolving-merge-conflicts/ # Disciplina de resolução de conflitos por hunk
 │   │   ├── handoff/              # Compactar sessão em documento de transição
 │   │   ├── opencode-config/      # Meta-skill: escrever configurações deste repositório
 │   │   ├── reflect/              # Melhoria contínua

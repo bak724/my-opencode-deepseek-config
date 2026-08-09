@@ -73,7 +73,7 @@ Check every changed function/logic path against:
 - [ ] Performance: N+1 queries, unnecessary loops, large allocations
 - [ ] Concurrency: race conditions, shared mutable state (if applicable)
 
-## Entropy scan (before dimension review)
+## Mechanical scan (before dimension review)
 
 A quick scan for mechanical issues:
 
@@ -85,7 +85,7 @@ A quick scan for mechanical issues:
   rest of the file? Flag synonyms used for the same concept.
 - **Dead imports:** Any new import that has no usage in the added code? Flag.
 
-Report entropy findings in a single block before dimensions.
+Report mechanical findings in a single block before dimensions.
 
 ## Review dimensions
 
@@ -230,8 +230,8 @@ orchestrator's context — the single biggest review token cost.
 
 **Response contract for file-based reviews:** after writing the file, your reply
 is *only* the summary line + the absolute path — nothing else. Do not restate
-findings in the chat; the file is the artifact. (Borrowed from deepreview's
-file-IPC contract, minus its multi-agent pipeline.)
+findings in the chat; the file is the artifact. (File-IPC contract;
+deepreview's multi-agent pipeline is omitted.)
 
 ## Review → fix loop
 
@@ -253,8 +253,8 @@ Stop conditions: **clean** (no findings above nit), **max 5 iterations**, or
 looping only while a pass produces NEW or REGRESSION findings above nit severity;
 once a pass yields zero such findings, stop and surface any remaining
 RECURRING findings for a human rather than thrashing on fixes that aren't
-converging. (Novelty-based convergence, borrowed from deepreview, minus its
-pipeline.)
+converging. (Novelty-based convergence; deepreview's multi-agent pipeline
+omitted.)
 
 On iterations 2+, prepend a `## Prior Findings` block listing findings from the
 previous pass (with their IDs). Do NOT re-report a prior finding unless it is
@@ -262,17 +262,22 @@ a REGRESSION (was fixed in the interim, now broken again).
 
 ### Convergence check (for review→fix loops)
 
-When running a review→fix loop, stop when one of these conditions is true:
+Use the novelty tags from the Review → fix loop to drive convergence:
+
+- **converging**: 0 NEW findings, or NEW < previous round's NEW
+- **deadlocked**: 0 NEW but RECURRING findings persist across 2+ rounds
+- **diverging**: NEW > previous round's NEW
+
+Stop conditions:
 
 - **Clean:** No critical or major findings remain
-- **Plateau:** Same finding appears twice despite fixes — the fix approach is
-  wrong; pause and re-assess
-- **Diminishing returns:** Only minor/nit findings remain after 3 iterations —
-  surface to user and stop
+- **Converging + clean enough:** Only minor/nit findings and 0 NEW in last round — surface to user
+- **Deadlocked:** Same RECURRING findings appear 2+ rounds despite fixes — the fix approach is wrong; pause and re-assess
+- **Diverging:** Regressions are being introduced — stop immediately, report
 - **Hard cap:** 5 iterations maximum — force-stop and report
 
-Track iteration count and severity count at each round. Report:
-`Round N: critical=X, major=Y, minor=Z, nit=W. Next action: [continue|stop|re-assess]`
+Track iteration count and novelty breakdown at each round. Report:
+`Round N: NEW=X, RECURRING=Y, REGRESSION=Z, severity: critical=A, major=B. Verdict: [converging|deadlocked|diverging|clean]. Next: [continue|stop|re-assess]`
 
 ## Posting to a PR
 

@@ -14,7 +14,7 @@
 - 权限基线：默认放行，破坏性 bash 命令设为 `ask`；`.env` 类敏感文件 `deny`；外部目录 `ask`
 - 上下文压缩：DCP 主动压缩（35K-75K 阈值）+ OpenCode 原生 compaction 兜底
 - 全局规则：`AGENTS.md`（核心原则、任务拒绝契约、上下文与 Token 效率、自我验证、反模式等）
-- 技能：`skills/` 目录下 **16 个** `SKILL.md` 技能，通过原生 `skill` 工具按需加载
+- 技能：`skills/` 目录下 **17 个** `SKILL.md` 技能，通过原生 `skill` 工具按需加载
 - 插件：`superpowers`（14 个过程型技能）、`@tarquinen/opencode-dcp`（智能上下文裁剪）
 - 实验功能：`batch_tool` 已默认开启
 
@@ -214,9 +214,10 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 | --- | --- |
 | `code-review` | 双轴并行审查（规范 + 规约）+ 严重度校准 |
 | `codemap` | 生成带标注的仓库结构图，节省探索 token |
-| `gh-cli` | GitHub CLI v2.96+ 全面参考（Issues 2.0、copilot、agent-task、gh skill） |
+| `gh-cli` | GitHub CLI v2.97+ 全面参考（Issues 2.0、copilot、agent-task、gh skill、project by-name） |
 | `git-master` | 高级 Git 操作：rebase、squash、bisect、reflog、worktree |
 | `git-release` | Tag 发布：SemVer 推断、发布说明、gh release 命令 |
+| `resolving-merge-conflicts` | 逐 hunk 解析合并冲突：追溯原始意图、不发明新行为、永不 --abort |
 | `handoff` | 压缩会话为交接文档（路径引用，不复制内容） |
 | `opencode-config` | 编写和维护 OpenCode 配置 |
 | `reflect` | 持续改进：发现摩擦 → 提出最小修复 |
@@ -231,7 +232,7 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 
 ## 设计决策与迭代记录
 
-核心思路借鉴了 [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent)（意图门控、只读隔离、反模式）、[oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim)（调度器优先、后备链、拒绝契约）、[anomalyco/opencode](https://github.com/anomalyco/opencode)（配置 Schema、技能体系）、[cli/cli](https://github.com/cli/cli)（gh 完整命令集）、[OpenSpec](https://github.com/Fission-AI/OpenSpec)（delta specs、变更提案更新）、[mattpocock/skills](https://github.com/mattpocock/skills)（交接文档、结构化调试）、[pi](https://github.com/earendil-works/pi)（先答后改、精简响应）和 [deepreview](https://github.com/mechanai/deepreview)（熵扫描、收敛检查）的优点，纯配置实现，零额外依赖。
+核心思路借鉴了 [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent)（意图门控、只读隔离、反模式）、[oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim)（调度器优先、后备链、拒绝契约）、[anomalyco/opencode](https://github.com/anomalyco/opencode)（配置 Schema、技能体系）、[cli/cli](https://github.com/cli/cli)（gh v2.97 完整命令集）、[OpenSpec](https://github.com/Fission-AI/OpenSpec)（delta specs、变更提案更新）、[mattpocock/skills](https://github.com/mattpocock/skills)（冲突解析纪律、交接文档）、[pi](https://github.com/earendil-works/pi)（先答后改、精简响应）和 [deepreview](https://github.com/mechanai/deepreview)（novelty 分类收敛、有效大小路由）的优点，纯配置实现，零额外依赖。
 
 > **借鉴而非照搬**：过重的流水线只汲取轻量化设计理念；冗余功能由现有 agents/skills 覆盖，不新增。遵循"精简优先于新增"原则，每次迭代都以净减 token 为目标。
 
@@ -248,6 +249,7 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 | **v21（全面瘦身重构）** | 技能 18→17（移除 deepwork/conventional-commits/diagnose，新增 writing-great-skills/shared-language）；命令 29→18（-38%）；AGENTS.md 227→212 行（-7%）；技能逐句 no-op 修剪。code-review 双轴并行 + 校准文件机制。借鉴 pi/deepreview/mattpocock 等 6 个仓库实战经验。 |
 | **v22（Schema 校验瘦身）** | 核对 OpenCode 与 DCP 官方 schema：删除失效的 `agent.fallback` 死键；确认 `dcp.jsonc` 全部键位合法（v3.1.14），零改动不盲增；AGENTS.md 合并「Token 效率」入「上下文管理」并全量去重、修复 `Self-Verification` 悬空引用（212→197 行）；orchestrator 合并三张路由表（128→79 行，-38%，Intent Gate/Agent Directory/Fallback 全保留）；14 个技能剥离被解析器忽略的 `license/compatibility/metadata` frontmatter（-70 行）；`tool_output` 下调为主动省 token（1500 行/40KB）。 |
 | **v23（整合双纪律+精简合并）** | 基于 6 个上游仓库最终整合：删除 `gh-skill`（功能合并入 `gh-cli` Agent Skills 节，-122 行）；修复 `verification-planning` 死引用；AGENTS.md 新增 Pi 启发二纪律（先答后改+表态、全局 brevity）+ slim 委派契约+job board + deepreview 文件 IPC（+15 行）；orchestrator 表去重模型列（重组为 Pro/Flash 子表，79→86 行）；reviewer 补验证者默认拒绝立场（+6 行）；gh-cli Agent Skills 节强化（+10 行）。净减 ~90 行，skills 17→16。 |
+| **v24（对齐上游 v2.97 + 冲突解析）** | gh-cli 全面升级至 v2.97.0（修复 11 处过时内容：gh skill/view/uninstall、agent-task 签名、secret --app、telemetry 废弃等）；新增 `project` 按名编辑字段、`issue develop`、`org list`、`label clone` 等新命令；code-review 熵扫描正名为 Mechanical scan，收敛检查增强为 converging/deadlocked/diverging 三分法；新增 `resolving-merge-conflicts`（来自 mattpocock/skills，~200 token）；calibration.yml 启用三条默认降级规则。skills 16→17。 |
 
 ## 仓库结构
 
@@ -266,16 +268,17 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 │   │   ├── explore.md            # flash：代码库搜索（只读）
 │   │   ├── librarian.md          # flash：外部检索（只读）
 │   │   └── light-orchestrator.md # flash：简单编辑
-│   ├── skills/                   # 16 个按需加载技能
+│   ├── skills/                   # 17 个按需加载技能
 │   │   ├── code-review/          # 双轴并行审查 + 严重度校准
 │   │   ├── codemap/              # 生成仓库结构图
-│   │   ├── gh-cli/               # GitHub CLI v2.96+ 参考
+│   │   ├── gh-cli/               # GitHub CLI v2.97+ 参考
 │   │   ├── git-master/           # 高级 Git 操作
 │   │   ├── git-release/          # Tag 发布
 │   │   ├── handoff/              # 会话压缩为交接文档
 │   │   ├── opencode-config/      # 元技能：本仓库配置编写
 │   │   ├── reflect/              # 持续改进
 │   │   ├── remove-deadcode/      # 死代码检测与删除
+│   │   ├── resolving-merge-conflicts/ # 逐 hunk 冲突解析纪律
 │   │   ├── security-review/      # 安全审查清单
 │   │   ├── shared-language/      # 领域术语表（节省 token）
 │   │   ├── simplify/             # 行为保持的代码简化

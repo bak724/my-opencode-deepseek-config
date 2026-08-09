@@ -14,7 +14,7 @@
 - 権限ベースライン：デフォルト許可、破壊的 bash コマンドは `ask`；`.env` 等の機密ファイルは `deny`；外部ディレクトリは `ask`
 - コンテキスト圧縮：DCP 能動的圧縮（35K-75K 閾値）+ OpenCode ネイティブ compaction によるフォールバック
 - グローバルルール：`AGENTS.md`（中核原則、タスク拒否契約、コンテキストとトークン効率、自己検証、アンチパターン等）
-- スキル：`skills/` ディレクトリ配下の **16 個**の `SKILL.md` スキル、ネイティブ `skill` ツールでオンデマンド読み込み
+- スキル：`skills/` ディレクトリ配下の **17 個**の `SKILL.md` スキル、ネイティブ `skill` ツールでオンデマンド読み込み
 - プラグイン：`superpowers`（14 個のプロセス型スキル）、`@tarquinen/opencode-dcp`（インテリジェントコンテキストトリミング）
 - 実験的機能：`batch_tool` がデフォルトで有効
 
@@ -214,9 +214,10 @@ OpenCode はネイティブ `skill` ツールを通じてスキルをオンデ�
 | --- | --- |
 | `code-review` | 二軸並行レビュー（規約 + 仕様）+ 重大度キャリブレーション |
 | `codemap` | 注釈付きリポジトリ構造図の生成、探索トークンの節約 |
-| `gh-cli` | GitHub CLI v2.96+ 完全リファレンス（Issues 2.0、copilot、agent-task、gh skill） |
+| `gh-cli` | GitHub CLI v2.97+ 完全リファレンス（Issues 2.0、copilot、agent-task、gh skill） |
 | `git-master` | 高度な Git 操作：rebase、squash、bisect、reflog、worktree |
 | `git-release` | タグリリース：SemVer 推論、リリースノート、gh release コマンド |
+| `resolving-merge-conflicts` | コンフリクトをhunkごとに解決：元の意図を追跡し、新しい動作を発明せず、--abortは絶対に使用しない |
 | `handoff` | セッションを引継ぎドキュメントに圧縮（パス参照、内容コピーなし） |
 | `opencode-config` | OpenCode 設定の作成と保守 |
 | `reflect` | 継続的改善：摩擦の発見 → 最小限の修正を提案 |
@@ -231,7 +232,7 @@ OpenCode はネイティブ `skill` ツールを通じてスキルをオンデ�
 
 ## 設計判断とイテレーション記録
 
-中核となる考え方は [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent)（意図ゲーティング、読み取り専用分離、アンチパターン）、[oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim)（スケジューラー優先、フォールバックチェーン、拒否契約）、[anomalyco/opencode](https://github.com/anomalyco/opencode)（設定スキーマ、スキル体系）、[cli/cli](https://github.com/cli/cli)（gh 完全コマンドセット）、[OpenSpec](https://github.com/Fission-AI/OpenSpec)（delta specs、変更提案更新）、[mattpocock/skills](https://github.com/mattpocock/skills)（引継ぎドキュメント、構造化デバッグ）、[pi](https://github.com/earendil-works/pi)（先に回答し後から編集、簡潔な応答）、[deepreview](https://github.com/mechanai/deepreview)（エントロピースキャン、収束チェック）の長所を参考にし、純粋な設定で実現、追加依存ゼロである。
+中核となる考え方は [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent)（意図ゲーティング、読み取り専用分離、アンチパターン）、[oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim)（スケジューラー優先、フォールバックチェーン、拒否契約）、[anomalyco/opencode](https://github.com/anomalyco/opencode)（設定スキーマ、スキル体系）、[cli/cli](https://github.com/cli/cli)（gh v2.97 完全コマンドセット）、[OpenSpec](https://github.com/Fission-AI/OpenSpec)（delta specs、変更提案更新）、[mattpocock/skills](https://github.com/mattpocock/skills)（conflict resolution discipline, handoff docs）、[pi](https://github.com/earendil-works/pi)（先に回答し後から編集、簡潔な応答）、[deepreview](https://github.com/mechanai/deepreview)（novelty-based convergence, effective-size routing）の長所を参考にし、純粋な設定で実現、追加依存ゼロである。
 
 > **参考であって模倣ではない**：過重なパイプラインからは軽量設計理念のみを抽出。冗長機能は既存の agents/skills でカバーし、新規追加は行わない。「削減を追加より優先」の原則に従い、各イテレーションでトークンの純減を目標とする。
 
@@ -248,6 +249,7 @@ OpenCode はネイティブ `skill` ツールを通じてスキルをオンデ�
 | **v21（全面的スリム化リファクタリング）** | スキル 18→17（deepwork/conventional-commits/diagnose 削除、writing-great-skills/shared-language 追加）。コマンド 29→18（-38%）。AGENTS.md 227→212 行（-7%）。スキルを一文単位で no-op トリミング。code-review の二軸並行+キャリブレーションファイル機構。pi/deepreview/mattpocock 等 6 リポジトリの実戦経験を参考 |
 | **v22（スキーマ検証とスリム化）** | OpenCode と DCP 公式スキーマを検証：無効な `agent.fallback` デッドキーを削除。`dcp.jsonc` の全キーが合法であることを確認（v3.1.14）、ゼロ変更で盲目的な追加なし。AGENTS.md の「トークン効率」を「コンテキスト管理」に統合し完全重複排除、`Self-Verification` の宙吊り参照を修正（212→197 行）。orchestrator の 3 つのルーティングテーブルを統合（128→79 行、-38%、Intent Gate/Agent Directory/Fallback は完全保持）。14 スキルからパーサーに無視される `license/compatibility/metadata` frontmatter を除去（-70 行）。`tool_output` を能動的トークン節約にダウンサイズ（1500 行/40KB） |
 | **v23（二重規律統合+削減統合）** | 6 つの上流リポジトリに基づく最終統合：`gh-skill` 削除（機能を `gh-cli` Agent Skills セクションに統合、-122 行）。`verification-planning` のデッドリファレンス修正。AGENTS.md に Pi 由来の二重規律追加（先に回答し後から編集+表明、グローバル簡潔性）+ slim 委任契約+ジョブボード + deepreview ファイル IPC（+15 行）。orchestrator テーブルのモデル列重複排除（Pro/Flashサブテーブルに再構成、79→86）。reviewer に検証者デフォルト拒否スタンスを補完（+6 行）。gh-cli Agent Skills セクション強化（+10 行）。純減 ~90 行、スキル 17→16 |
+| **v24（Upstream v2.97 + Conflict Resolution）** | gh-cli fully upgraded to v2.97.0（fixed 11 outdated items）；added `project` by-name editing, `issue develop`, `org list` commands；code-review entropy scan renamed to Mechanical scan, convergence enhanced with converging/deadlocked/diverging triage；added `resolving-merge-conflicts`；calibration.yml now has 3 active downgrade rules. skills 16→17. |
 
 ## リポジトリ構造
 
@@ -266,12 +268,13 @@ OpenCode はネイティブ `skill` ツールを通じてスキルをオンデ�
 │   │   ├── explore.md            # flash：コードベース検索（読み取り専用）
 │   │   ├── librarian.md          # flash：外部検索（読み取り専用）
 │   │   └── light-orchestrator.md # flash：単純編集
-│   ├── skills/                   # 16 個のオンデマンドスキル
+│   ├── skills/                   # 17 個のオンデマンドスキル
 │   │   ├── code-review/          # 二軸並行レビュー + 重大度キャリブレーション
 │   │   ├── codemap/              # リポジトリ構造図の生成
-│   │   ├── gh-cli/               # GitHub CLI v2.96+ リファレンス
+│   │   ├── gh-cli/               # GitHub CLI v2.97+ リファレンス
 │   │   ├── git-master/           # 高度な Git 操作
 │   │   ├── git-release/          # タグリリース
+│   │   ├── resolving-merge-conflicts/ # コンフリクト解決規律
 │   │   ├── handoff/              # セッションを引継ぎドキュメントに圧縮
 │   │   ├── opencode-config/      # メタスキル：本リポジトリ設定の作成
 │   │   ├── reflect/              # 継続的改善

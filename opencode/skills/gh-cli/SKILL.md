@@ -1,11 +1,11 @@
 ---
 name: gh-cli
-description: Patterns for invoking the GitHub CLI (gh v2.96.0+) from agents. Use when the task mentions GitHub, gh, pull requests/PRs, issues, releases, gists, Actions/workflow runs, forks, repo cloning, reviews, or you need exact gh commands. Covers structured output, pagination, repo targeting, search vs list, issue types/sub-issues, discussions, projects, rulesets, agent skills, AI commands (copilot, agent-task), repo read-file/read-dir, and gh api fallback.
+description: Patterns for invoking the GitHub CLI (gh v2.97.0+) from agents. Use when the task mentions GitHub, gh, pull requests/PRs, issues, releases, gists, Actions/workflow runs, forks, repo cloning, reviews, or you need exact gh commands. Covers structured output, pagination, repo targeting, search vs list, issue types/sub-issues, discussions, projects, rulesets, agent skills, AI commands (copilot, agent-task), repo read-file/read-dir, and gh api fallback.
 ---
 
 # GitHub CLI (`gh`) agent patterns
 
-Authoritative patterns for driving the official `gh` CLI (v2.96.0) from agents,
+Authoritative patterns for driving the official `gh` CLI (v2.97.0) from agents,
 based on [cli/cli](https://github.com/cli/cli) trunk. Prefer `gh` over raw `curl`
 or `gh api` — `gh` handles auth, pagination, and JSON output automatically.
 
@@ -34,7 +34,7 @@ Essential environment variables for agent-driven scripting:
 | `GH_FORCE_TTY=1` | Force colored/formatted output even when piped |
 | `NO_COLOR=1` | Strip ANSI color from output |
 | `GH_DEBUG=api` | Log HTTP request/response for debugging |
-| `GH_TELEMETRY=0` | Disable telemetry (opt-out; default enabled since v2.91.0). Use `gh telemetry` to manage. |
+| `GH_TELEMETRY=false` | Disable telemetry (opt-out; default enabled since v2.91.0). `gh telemetry` is a help topic, not a command group. |
 
 Token/auth: `GH_TOKEN` or `GITHUB_TOKEN` for non-interactive use. `@me` resolves to the authenticated user: `--assignee @me`, `--author @me`, `--owner @me`. Use `gh auth status --json` to verify the active session.
 
@@ -112,8 +112,8 @@ override. Set `GH_REPO=OWNER/REPO` for session-wide default.
   non-interactively)
 - `gh discussion edit <n>`: `--title`, `--body`, `--add-label <name>`,
   `--remove-label <name>`, `--category`
-- `gh discussion comment {<n>|<url>}`: `--body "text"`, `--editor`
-  (interactive edit), `--edit <comment-id>`, `--delete <comment-id>` (`--yes`
+- `gh discussion comment {<n>|<url>}`: `--body "text"`
+  `--edit <comment-id>`, `--delete <comment-id>` (`--yes`
   to skip confirmation prompt)
 
 ## Projects V2 (`gh project`)
@@ -145,6 +145,15 @@ gh project copy <number> --source-owner <org> --target-owner "@me" --title "Copy
 gh project close <number>
 gh project delete <number>
 ```
+
+# By-name field editing (v2.97.0+)
+```bash
+gh project item-edit <item-id> --field "Status" --value "In Progress"
+gh project item-edit <item-id> --field "Priority" --clear
+gh project item-list <number> --owner "@me" --field "Status" --field "Priority"
+```
+
+The old `--field-id`/`--text`/`--single-select-option-id` flow still works for scripting but the by-name path is simpler for humans.
 
 All `gh project` commands accept `--owner` (user or org). Use `--format json` +
 `--jq` for structured output on `item-list`, `field-list`.
@@ -292,7 +301,7 @@ gh secret set SECRET_NAME < secret.txt -R owner/repo       # from file
 gh secret set SECRET_NAME -b "$(cmd)" -R owner/repo        # from command output
 gh secret set SECRET_NAME -b "val" --org org                # org-level
 gh secret set SECRET_NAME -b "val" --env production -R owner/repo  # env-level
-gh secret set AGENT_SECRET -b "val" --agent <agent-id>      # Copilot agent secret (v2.93.0+)
+gh secret set SECRET_NAME -b "val" --app agents -R owner/repo     # Copilot agent secret (v2.93.0+)
 gh secret list -R owner/repo                               # list names (not values)
 gh secret remove SECRET_NAME -R owner/repo
 
@@ -358,34 +367,32 @@ First-class command group for discovering, installing, and publishing Agent Skil
 Replaces the standalone `gh-skill` skill (deleted in v23).
 
 ```bash
-# Discovery
-gh skill search <query> --agent opencode               # search for skills (v2.90.0+)
-gh skill list --agent opencode --json name,description # list available skills
-gh skill list --json name,description,installed        # list installed skills (v2.95.0+)
-gh skill preview <skill-id> --agent opencode            # preview a skill's content before installing (v2.90.0+)
-gh skill view <skill-id> --agent opencode               # view an installed skill's content (v2.95.0+)
+# Discovery (v2.94.0+)
+gh skill search <query>                                 # search for skills (no --agent flag)
+gh skill search <query> --owner <org-or-user>            # filter by owner
+gh skill list --json skillName,description,installed    # list installed skills
+gh skill preview <skill-id>                              # preview a skill before installing
+gh skill preview <skill-id> --allow-hidden-dirs          # discover in hidden dirs
 
-# Installation
-gh skill install owner/repo --agent opencode            # install with agent binding
-gh skill install owner/repo --agent opencode --pin v1.2 # pin to a specific tag/ref (v2.90.0+)
-gh skill install owner/repo --scope project              # install to local project (vs global)
-gh skill install --all --agent opencode                  # install all matching skills
-gh skill install --allow-hidden-dirs                     # discover skills in .claude/skills/ etc (v2.91.0+)
-gh skill install --upstream                              # force upstream when repo re-publishes a skill (v2.91.0+)
-gh skill install --from-local ./local-repo               # install from a local directory
+# Installation (v2.94.0+)
+gh skill install owner/repo --agent opencode             # install with agent binding
+gh skill install owner/repo --agent opencode --pin v1.2  # pin to version tag
+gh skill install author/skill@v1.2.0 --agent opencode    # namespaced with version
+gh skill install --all --agent opencode                  # install all matching
+gh skill install --from-local ./local-repo --agent opencode # from local dir
+gh skill install owner/repo --force --agent opencode     # force overwrite
+gh skill install owner/repo --dir ./custom-path          # install to custom dir
 
-# Management
-gh skill update <skill-id> --agent opencode             # update an installed skill (v2.90.0+)
-gh skill update --all --agent opencode                  # update all installed skills (v2.95.0+)
-gh skill uninstall owner/repo                            # remove an installed skill
-gh skill publish                                         # publish a new skill from cwd
+# Management (v2.94.0+)
+gh skill update <skill-id>                               # update installed skill (no --agent)
+gh skill update --all --dry-run                           # preview updates
+gh skill update --all --force --unpin                     # force update pinned skills
+
+# Publishing (v2.94.0+)
+gh skill publish                                          # publish skill from cwd
 ```
 
-`gh skill install --agent opencode` creates the skill under
-`~/.config/opencode/skills/<name>/SKILL.md`. Use `--agent` to target a specific
-coding agent; omitting it installs to the system-global skills directory.
-Skills installed via `gh skill` appear in the agent's available skills list
-automatically — no config change needed.
+`gh skill install --agent opencode` installs skills to `~/.config/opencode/skills/<name>/SKILL.md`. Default scope is `project`, default agent is `github-copilot` — always pass `--agent opencode`. Skills installed via `gh skill` appear in the agent's available skills list automatically — no config change needed.
 
 ## AI-integrated commands (`gh copilot`, `gh agent-task`)
 
@@ -416,11 +423,13 @@ Aliases: `gh agent`, `gh agents`. Delegates a coding task to a GitHub coding age
 PAT/`GH_TOKEN` is rejected.
 
 ```bash
-gh agent-task create --title "Fix the login redirect" --body "Users get 404 after login"
-gh agent-task create --title "Add pagination" --base main
-gh agent-task create --custom-agent my-agent --title "..." --body "..."   # specific agent (v2.83.0+)
-gh agent-task list --json state,title,url --jq '.[]'
-gh agent-task view <id> --json state,title,body --jq '.'
+gh agent-task create "Fix the login redirect"                       # positional description
+gh agent-task create "Fix the login redirect" --base main           # set base branch
+gh agent-task create "Add pagination" -F task-description.md        # from file
+gh agent-task create --custom-agent my-agent "Add pagination"       # specific agent (v2.83.0+)
+gh agent-task create --follow "Fix login"                           # follow progress
+gh agent-task list --json id,name,state,repository                  # list tasks
+gh agent-task view <id> --json id,name,state                        # view task details
 ```
 
 - `--custom-agent` / `-a` flag (v2.83.0+) selects a named custom agent instead of the default.
@@ -477,9 +486,18 @@ v2.96.0+) to fetch artifacts.
 - `gh run rerun <id> --failed` — rerun only failed jobs.
 - `gh attestation verify|download file.bin -R owner/repo` — Sigstore supply-chain.
 - `gh release download <tag>` — no auth needed on public repos (v2.96+).
-- `gh telemetry` — view and manage telemetry opt-out (v2.91.0+). Set `GH_TELEMETRY=0` to disable.
+- Telemetry: set `GH_TELEMETRY=false` or `DO_NOT_TRACK=true` env vars to disable (v2.91.0+).
 - `gh skill` — see the Agent Skills section above and the `gh-skill` skill for the full workflow.
 - `--json` with NO value: `gh pr list --json` prints all available JSON field names — use this to discover fields before querying. Works on all list/view commands.
+
+## New in v2.97.0
+
+- `gh project` by-name field editing (see above)
+- `gh issue develop <n>` — manage linked branches (`--list`, `--checkout`, `--name`, `--base`)
+- `gh org list` — list organizations for authenticated user
+- `gh label clone` — clone labels from one repo to another
+- `gh extension browse` / `gh extension create` / `gh extension search` — new extension subcommands
+- Security: `gh api`, `gh gist view`, `gh pr diff`, `gh repo read-file` now strip ANSI escapes by default; use `--allow-escape-sequences` to preserve them
 
 ## Quick reference
 
@@ -530,11 +548,16 @@ gh search repos --language go --stars ">5000"
 
 # Copilot & agent tasks
 gh copilot "explain this error"
-gh agent-task create --title "Fix login" --body "..."
-gh agent-task list --json state,title
+gh agent-task create "Fix login"
+gh agent-task list --json id,name,state
 
 # Skills & file reading
-gh skill search <query> --agent opencode
+# New in v2.97.0
+gh project item-edit <id> --field "Status" --value "Done"
+gh issue develop <n> --list
+gh org list
+gh label clone --source-repo owner/repo
+gh skill search <query>
 gh skill install owner/repo --agent opencode
 gh skill update <skill-id>
 gh repo read-file README.md --repo cli/cli
@@ -543,5 +566,5 @@ gh repo read-dir script --repo cli/cli
 # Auth & config
 gh config set git_protocol ssh
 gh auth status --json
-gh telemetry                                     # view telemetry status (v2.91.0+)
+# Telemetry controlled via GH_TELEMETRY=false env var
 ```
