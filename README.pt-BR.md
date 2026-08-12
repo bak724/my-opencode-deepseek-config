@@ -214,7 +214,7 @@ O OpenCode expõe skills sob demanda pela ferramenta nativa `skill` — os agent
 | --- | --- |
 | `code-review` | Revisão paralela em dois eixos (convenções + especificação) + calibração de severidade |
 | `codemap` | Gerar mapa anotado da estrutura do repositório, economizando tokens de exploração |
-| `gh-cli` | Referência completa do GitHub CLI v2.97+ (Issues 2.0, copilot, agent-task, gh skill) |
+| `gh-cli` | Referência completa do GitHub CLI v2.97+ (Issues 2.0, copilot, agent-task, gh skill) + alerta de segurança (injeção de escape) |
 | `git-master` | Operações avançadas de Git: rebase, squash, bisect, reflog, worktree |
 | `git-release` | Release com tag: inferência de SemVer, notas de release, comando gh release |
 | `resolving-merge-conflicts` | Resolver conflitos de merge por hunk: rastrear intenção original, nunca inventar comportamento, nunca --abort |
@@ -238,18 +238,12 @@ A abordagem central foi inspirada nos pontos fortes de [oh-my-openagent](https:/
 
 ### Marcos das iterações
 
-| Fase | Principais alterações |
-| --- | --- |
-| **v1–v7 (fundação)** | Vinculação de dois modelos, sistema de papéis dos agents, gate de intenção/roteamento por classificação, regras globais AGENTS.md, diretório de skills e aliases de comandos, baseline de permissões |
-| **v8–v12 (revisão + especificação)** | Aprimoramento do code-review (classificação/autoverificação/critérios de recusa), criação do spec-workflow (explore→propose→apply→archive), novos skills deepwork/reflect/verification-planning, gh-cli alinhado à v2.96+ |
-| **v13–v15 (contrato + enxugamento)** | AGENTS.md ganhou Evidence Discipline / Task Rejection Contract / stop condition; remoção completa de duplicações entre prompts de agents e regras globais; verificação de erros em subagents em segundo plano |
-| **v16–v18 (execução eficiente)** | Remoção de nomes mitológicos, fusão de tabelas de roteamento, gh-cli expandido para Issues 2.0, spec-workflow com verify + framework de decisão |
-| **v19 (alinhamento upstream)** | Revisão de 6 repositórios upstream; correção de bug nos comentários linha a linha do `/review-pr`; roteamento do code-review alterado de contagem bruta de linhas para volume lógico efetivo de código |
-| **v20 (refatoração e otimização)** | `agent/`→`agents/` alinhado à recomendação do OpenCode; AGENTS.md reduzido em 22% (290→227 linhas); novos skills `diagnose` (depuração em 6 fases) + `handoff` (transição de sessão); spec-workflow com `/update`; code-review com varredura de entropia + verificação de convergência; prompts de agents reduzidos em 20% |
-| **v21 (reestruturação e enxugamento completo)** | Skills 18→17 (remoção de deepwork/conventional-commits/diagnose, adição de writing-great-skills/shared-language); comandos 29→18 (-38%); AGENTS.md 227→212 linhas (-7%); poda de no-ops frase por frase nos skills. code-review com dois eixos paralelos + mecanismo de arquivo de calibração. Inspirado na experiência prática de 6 repositórios incluindo pi/deepreview/mattpocock. |
-| **v22 (validação de schema e enxugamento)** | Validação contra schemas oficiais do OpenCode e DCP: remoção da chave morta `agent.fallback`; confirmação de que todas as chaves em `dcp.jsonc` são válidas (v3.1.14), zero alterações sem necessidade; AGENTS.md com fusão de "Eficiência de tokens" em "Gerenciamento de contexto" e remoção completa de duplicações, correção de referência órfã em `Self-Verification` (212→197 linhas); orchestrator com fusão de três tabelas de roteamento (128→79 linhas, -38%, Intent Gate/Agent Directory/Fallback totalmente preservados); 14 skills tiveram frontmatter `license/compatibility/metadata` ignorado pelo parser removido (-70 linhas); `tool_output` reduzido para economia proativa de tokens (1500 linhas/40KB). |
-| **v23 (integração de duas disciplinas + fusão e enxugamento)** | Integração final baseada em 6 repositórios upstream: remoção de `gh-skill` (funcionalidade incorporada na seção Agent Skills do `gh-cli`, -122 linhas); correção de referência morta em `verification-planning`; AGENTS.md com duas disciplinas inspiradas no Pi (responder primeiro + declarar posição, concisão global) + contrato de delegação do slim + job board + IPC por arquivo do deepreview (+15 linhas); tabela do orchestrator reestruturada em subtabelas Pro/Flash, 79→86 linhas; reviewer com postura padrão de recusa do verificador (+6 linhas); seção Agent Skills do gh-cli reforçada (+10 linhas). Redução líquida de ~90 linhas, skills 17→16. |
-| **v24 (upstream v2.97 + resolução de conflitos)** | gh-cli totalmente atualizado para v2.97.0 (11 itens desatualizados corrigidos: gh skill/view/uninstall, assinatura agent-task, secret --app, descontinuação de telemetria, etc.); adicionados comandos `project` por nome, `issue develop`, `org list`, `label clone`; code-review: varredura de entropia renomeada → Mechanical scan, convergência aprimorada com triagem converging/deadlocked/diverging; adicionado `resolving-merge-conflicts` (do mattpocock/skills, ~200 tokens); calibration.yml agora com 3 regras de downgrade ativas. skills 16→17. |
+25 iterações desde a v1, continuamente alinhadas com as melhores práticas:
+
+- **v1-v7 (Fundação)**: Vinculação de modelo duplo, sistema de funções de agentes, roteamento por intenção, regras globais AGENTS.md, diretório skills, base de permissões
+- **v8-v15 (Revisão + Specs + Contratos)**: code-review calibração de eixo duplo, spec-workflow, alinhamento gh-cli, contrato de rejeição, verificações em segundo plano
+- **v16-v22 (Emagrecimento contínuo)**: Comandos 29→18 (-38%), AGENTS.md 290→211 (-27%), corte no-op, validação de esquema
+- **v23-v25 (Alinhamento + Segurança)**: 6 repositórios upstream integrados, gh-cli v2.97 alerta de injeção de escape, refinamento procedure-driven de prompts, ajuste DCP
 
 ## Estrutura do repositório
 
@@ -271,7 +265,7 @@ A abordagem central foi inspirada nos pontos fortes de [oh-my-openagent](https:/
 │   ├── skills/                   # 17 skills carregadas sob demanda
 │   │   ├── code-review/          # Revisão paralela em dois eixos + calibração de severidade
 │   │   ├── codemap/              # Gerar mapa da estrutura do repositório
-│   │   ├── gh-cli/               # Referência do GitHub CLI v2.97+
+│   │   ├── gh-cli/               # Referência do GitHub CLI v2.97+ + alerta segurança
 │   │   ├── git-master/           # Operações avançadas de Git
 │   │   ├── git-release/          # Release com tag
 │   │   ├── resolving-merge-conflicts/ # Disciplina de resolução de conflitos por hunk

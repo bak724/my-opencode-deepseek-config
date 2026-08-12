@@ -9,6 +9,32 @@ Authoritative patterns for driving the official `gh` CLI (v2.97.0) from agents,
 based on [cli/cli](https://github.com/cli/cli) trunk. Prefer `gh` over raw `curl`
 or `gh api` — `gh` handles auth, pagination, and JSON output automatically.
 
+## Security Advisory — escape-sequence injection (v2.97.0)
+
+v2.97.0 fixed 4 escape-sequence injection vulnerabilities. These commands can
+inject ANSI control sequences (cursor movement, screen clearing, clipboard
+exfiltration) when output is rendered to a terminal:
+
+| Affected command | Risk |
+|---|---|
+| `gh gist view` | Untrusted gist content → terminal |
+| `gh api` | Untrusted API response → terminal |
+| `gh pr diff` | Untrusted PR content → terminal |
+| `gh release download --output -` | Untrusted release artifact → stdout/terminal |
+| `gh codespace logs` | Untrusted container output → terminal |
+| `gh agent-task view` / `create` | Untrusted task description/output → terminal |
+
+**Agent rules:**
+- **Never** pipe output to a terminal renderer. Prefer `--json` for structured
+  output; use `> file` for raw content.
+- **Never** use `gh release download --output -` (stdout) — always save to a file
+  with `--output <path>`.
+- For `gh repo read-file`, binary content is auto-refused and ANSI is stripped
+  by default since v2.97; use `--allow-escape-sequences` only when you need raw
+  escapes and understand the risk.
+- When fetching issues/PRs/comments from untrusted repos, prefer `--json` over
+  human-readable output — JSON is not vulnerable to escape injection.
+
 ## Interactivity policy
 
 `gh` does the right thing in non-TTY contexts: skips the pager, strips ANSI

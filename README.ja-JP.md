@@ -214,7 +214,7 @@ OpenCode はネイティブ `skill` ツールを通じてスキルをオンデ�
 | --- | --- |
 | `code-review` | 二軸並行レビュー（規約 + 仕様）+ 重大度キャリブレーション |
 | `codemap` | 注釈付きリポジトリ構造図の生成、探索トークンの節約 |
-| `gh-cli` | GitHub CLI v2.97+ 完全リファレンス（Issues 2.0、copilot、agent-task、gh skill） |
+| `gh-cli` | GitHub CLI v2.97+ 完全リファレンス（Issues 2.0、copilot、agent-task、gh skill）+ セキュリティ警告（エスケープインジェクション） |
 | `git-master` | 高度な Git 操作：rebase、squash、bisect、reflog、worktree |
 | `git-release` | タグリリース：SemVer 推論、リリースノート、gh release コマンド |
 | `resolving-merge-conflicts` | コンフリクトをhunkごとに解決：元の意図を追跡し、新しい動作を発明せず、--abortは絶対に使用しない |
@@ -238,18 +238,12 @@ OpenCode はネイティブ `skill` ツールを通じてスキルをオンデ�
 
 ### イテレーションマイルストーン
 
-| 段階 | 主要変更 |
-| --- | --- |
-| **v1-v7（基盤構築）** | デュアルモデルバインディング、エージェントロール体系、意図ゲーティング/分類ルーティング、AGENTS.md グローバルルール、skills ディレクトリとコマンドエイリアス、権限ベースライン |
-| **v8-v12（レビュー+仕様）** | code-review 強化（段階分け/自己チェック/拒否基準）、spec-workflow 確立（explore→propose→apply→archive）、deepwork/reflect/verification-planning 追加、gh-cli を v2.96+ にアライン |
-| **v13-v15（契約+削減）** | AGENTS.md に Evidence Discipline / Task Rejection Contract / stop condition 追加。エージェントプロンプトとグローバルルールの完全重複排除。バックグラウンドサブエージェントエラーチェック追加 |
-| **v16-v18（効率的実行）** | 神話的名称の除去、ルーティングテーブル統合、gh-cli を Issues 2.0 に拡張、spec-workflow に verify + 判断フレームワーク追加 |
-| **v19（上流との整合）** | 6 つの上流リポジトリを再検証。`/review-pr` の行単位コメントバグ修正。code-review ルーティングを生の行数から実効ロジックボリュームに変更 |
-| **v20（リファクタリング最適化）** | `agent/`→`agents/` に OpenCode 推奨へ統一。AGENTS.md 22%削減（290→227 行）。`diagnose`（6 段階デバッグ）+ `handoff`（セッション引継ぎ）スキル追加。spec-workflow に `/update` 追加。code-review にエントロピースキャン+収束チェック追加。エージェントプロンプト 20%重複排除 |
-| **v21（全面的スリム化リファクタリング）** | スキル 18→17（deepwork/conventional-commits/diagnose 削除、writing-great-skills/shared-language 追加）。コマンド 29→18（-38%）。AGENTS.md 227→212 行（-7%）。スキルを一文単位で no-op トリミング。code-review の二軸並行+キャリブレーションファイル機構。pi/deepreview/mattpocock 等 6 リポジトリの実戦経験を参考 |
-| **v22（スキーマ検証とスリム化）** | OpenCode と DCP 公式スキーマを検証：無効な `agent.fallback` デッドキーを削除。`dcp.jsonc` の全キーが合法であることを確認（v3.1.14）、ゼロ変更で盲目的な追加なし。AGENTS.md の「トークン効率」を「コンテキスト管理」に統合し完全重複排除、`Self-Verification` の宙吊り参照を修正（212→197 行）。orchestrator の 3 つのルーティングテーブルを統合（128→79 行、-38%、Intent Gate/Agent Directory/Fallback は完全保持）。14 スキルからパーサーに無視される `license/compatibility/metadata` frontmatter を除去（-70 行）。`tool_output` を能動的トークン節約にダウンサイズ（1500 行/40KB） |
-| **v23（二重規律統合+削減統合）** | 6 つの上流リポジトリに基づく最終統合：`gh-skill` 削除（機能を `gh-cli` Agent Skills セクションに統合、-122 行）。`verification-planning` のデッドリファレンス修正。AGENTS.md に Pi 由来の二重規律追加（先に回答し後から編集+表明、グローバル簡潔性）+ slim 委任契約+ジョブボード + deepreview ファイル IPC（+15 行）。orchestrator テーブルのモデル列重複排除（Pro/Flashサブテーブルに再構成、79→86）。reviewer に検証者デフォルト拒否スタンスを補完（+6 行）。gh-cli Agent Skills セクション強化（+10 行）。純減 ~90 行、スキル 17→16 |
-| **v24（Upstream v2.97 + Conflict Resolution）** | gh-cli fully upgraded to v2.97.0（fixed 11 outdated items）；added `project` by-name editing, `issue develop`, `org list` commands；code-review entropy scan renamed to Mechanical scan, convergence enhanced with converging/deadlocked/diverging triage；added `resolving-merge-conflicts`；calibration.yml now has 3 active downgrade rules. skills 16→17. |
+v1から25回の反復、継続的にアップストリームのベストプラクティスに整合：
+
+- **v1-v7（基盤）**: デュアルモデルバインディング、エージェントロールシステム、インテントゲートルーティング、AGENTS.mdグローバルルール、Skillsディレクトリ、権限ベースライン
+- **v8-v15（レビュー+仕様+契約）**: code-reviewデュアル軸キャリブレーション、spec-workflow、gh-cli整合、拒否契約、バックグラウンドチェック
+- **v16-v22（継続的スリム化）**: コマンド29→18（-38%）、AGENTS.md 290→211（-27%）、no-opトリミング、スキーマ検証
+- **v23-v25（整合+セキュリティ）**: 6つのアップストリームリポジトリを統合、gh-cli v2.97エスケープインジェクション警告、procedure-drivenプロンプト改善、DCPウィンドウチューニング
 
 ## リポジトリ構造
 
@@ -271,7 +265,7 @@ OpenCode はネイティブ `skill` ツールを通じてスキルをオンデ�
 │   ├── skills/                   # 17 個のオンデマンドスキル
 │   │   ├── code-review/          # 二軸並行レビュー + 重大度キャリブレーション
 │   │   ├── codemap/              # リポジトリ構造図の生成
-│   │   ├── gh-cli/               # GitHub CLI v2.97+ リファレンス
+│   │   ├── gh-cli/               # GitHub CLI v2.97+ リファレンス + セキュリティ警告
 │   │   ├── git-master/           # 高度な Git 操作
 │   │   ├── git-release/          # タグリリース
 │   │   ├── resolving-merge-conflicts/ # コンフリクト解決規律

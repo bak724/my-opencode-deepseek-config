@@ -214,7 +214,7 @@ OpenCode 透過原生 `skill` 工具按需暴露技能——Agent 只在需要�
 | --- | --- |
 | `code-review` | 雙軸並行審查（規範 + 規約）+ 嚴重度校準 |
 | `codemap` | 生成帶標註的儲存庫結構圖，節省探索 token |
-| `gh-cli` | GitHub CLI v2.97+ 全面參考（Issues 2.0、copilot、agent-task、gh skill） |
+| `gh-cli` | GitHub CLI v2.97+ 全面參考（Issues 2.0、copilot、agent-task、gh skill）+ 安全警告（轉義注入） |
 | `git-master` | 進階 Git 操作：rebase、squash、bisect、reflog、worktree |
 | `git-release` | Tag 發布：SemVer 推斷、發布說明、gh release 命令 |
 | `resolving-merge-conflicts` | 逐 hunk 解析合併衝突：追溯原始意圖、不發明新行為、永不 --abort |
@@ -238,18 +238,12 @@ OpenCode 透過原生 `skill` 工具按需暴露技能——Agent 只在需要�
 
 ### 迭代里程碑
 
-| 階段 | 關鍵變更 |
-| --- | --- |
-| **v1-v7（奠基）** | 雙模型繫結、agent 角色體系、意圖門控/分類路由、AGENTS.md 全域規則、skills 目錄與命令別名、權限基線 |
-| **v8-v12（審查+規約）** | 增強 code-review（分級/自檢/拒絕準則）、建立 spec-workflow（explore→propose→apply→archive）、新增 deepwork/reflect/verification-planning、gh-cli 對齊 v2.96+ |
-| **v13-v15（契約+精簡）** | AGENTS.md 新增 Evidence Discipline / Task Rejection Contract / stop condition；全量去重 agent prompt 與全域規則；補齊後臺子 agent 錯誤核查 |
-| **v16-v18（高效執行）** | 移除神話名稱、合併路由表、gh-cli 擴至 Issues 2.0、spec-workflow 增加 verify + 決策框架 |
-| **v19（對齊上游）** | 複核 6 個上游儲存庫；修正 `/review-pr` 逐行評論 Bug；code-review 路由從裸行數改為有效邏輯體量 |
-| **v20（重構最佳化）** | `agent/`→`agents/` 對齊 OpenCode 推薦；AGENTS.md 精簡 22%（290→227 行）；新增 `diagnose`（6 階段除錯）+ `handoff`（對話交接）技能；spec-workflow 增加 `/update`；code-review 增加熵掃描+收斂檢查；agent prompt 去重 20% |
-| **v21（全面瘦身重構）** | 技能 18→17（移除 deepwork/conventional-commits/diagnose，新增 writing-great-skills/shared-language）；命令 29→18（-38%）；AGENTS.md 227→212 行（-7%）；技能逐句 no-op 修剪。code-review 雙軸並行 + 校準檔案機制。借鑑 pi/deepreview/mattpocock 等 6 個儲存庫實戰經驗。 |
-| **v22（Schema 校驗瘦身）** | 核對 OpenCode 與 DCP 官方 schema：刪除失效的 `agent.fallback` 死鍵；確認 `dcp.jsonc` 全部鍵位合法（v3.1.14），零改動不盲增；AGENTS.md 合併「Token 效率」入「上下文管理」並全量去重、修復 `Self-Verification` 懸空引用（212→197 行）；orchestrator 合併三張路由表（128→79 行，-38%，Intent Gate/Agent Directory/Fallback 全保留）；14 個技能剝離被解析器忽略的 `license/compatibility/metadata` frontmatter（-70 行）；`tool_output` 下調為主動省 token（1500 行/40KB）。 |
-| **v23（整合雙紀律+精簡合併）** | 基於 6 個上游儲存庫最終整合：刪除 `gh-skill`（功能合併入 `gh-cli` Agent Skills 節，-122 行）；修復 `verification-planning` 死引用；AGENTS.md 新增 Pi 啟發二紀律（先答後改+表態、全域 brevity）+ slim 委派契約+job board + deepreview 檔案 IPC（+15 行）；orchestrator 表去重模型列（重組為 Pro/Flash 子表，79→86）；reviewer 補驗證者預設拒絕立場（+6 行）；gh-cli Agent Skills 節強化（+10 行）。淨減 ~90 行，skills 17→16。 |
-| **v24（對齊上游 v2.97 + 衝突解析）** | gh-cli 全面升級至 v2.97.0（修復 11 處過時內容）；新增 `project` 按名編輯、`issue develop`、`org list` 等命令；code-review 熵掃描正名為 Mechanical scan，收斂檢查增強為 converging/deadlocked/diverging 三分法；新增 `resolving-merge-conflicts`；calibration.yml 啟用三條預設降級規則。skills 16→17。 |
+自 v1 以來歷經 25 次迭代，持續對標上游儲存庫最佳實踐：
+
+- **v1-v7（奠基）**：雙模型繫結、Agent 角色體系、意圖門控路由、AGENTS.md 全域規則、Skills 目錄、權限基線
+- **v8-v15（審查+規約+契約）**：code-review 雙軸校準、spec-workflow、gh-cli 對齊、拒絕契約、後臺核查
+- **v16-v22（持續瘦身）**：命令 29→18（-38%）、AGENTS.md 290→211（-27%）、逐句 no-op 修剪、Schema 校驗去死鍵
+- **v23-v25（對齊+安全）**：整合 6 個上游儲存庫、gh-cli v2.97 轉義注入安全章節、procedure-driven 提示精化、DCP 視窗調優
 
 ## 儲存庫結構
 
@@ -271,7 +265,7 @@ OpenCode 透過原生 `skill` 工具按需暴露技能——Agent 只在需要�
 │   ├── skills/                   # 17 個按需載入技能
 │   │   ├── code-review/          # 雙軸並行審查 + 嚴重度校準
 │   │   ├── codemap/              # 生成儲存庫結構圖
-│   │   ├── gh-cli/               # GitHub CLI v2.97+ 參考
+│   │   ├── gh-cli/               # GitHub CLI v2.97+ 參考 + 安全警告
 │   │   ├── git-master/           # 進階 Git 操作
 │   │   ├── git-release/          # Tag 發布
 │   │   ├── handoff/              # 對話壓縮為交接文件

@@ -214,7 +214,7 @@ OpenCode stellt Skills über das native `skill`-Tool bei Bedarf bereit — Agent
 | --- | --- |
 | `code-review` | Zweiachsiges paralleles Review (Konvention + Spezifikation) + Schweregrad-Kalibrierung |
 | `codemap` | Annotiertes Repository-Strukturdiagramm generieren, spart Explorations-Token |
-| \`gh-cli\` | Vollständige GitHub CLI v2.97+-Referenz (Issues 2.0, Copilot, Agent-Task, gh skill) |
+| \`gh-cli\` | Vollständige GitHub CLI v2.97+-Referenz (Issues 2.0, Copilot, Agent-Task, gh skill) + Sicherheitswarnung (Escape-Injection) |
 | `git-master` | Fortgeschrittene Git-Operationen: Rebase, Squash, Bisect, Reflog, Worktree |
 | \`git-release\` | Tag-Release: SemVer-Ableitung, Release Notes, gh release-Befehl |
 | \`resolving-merge-conflicts\` | Merge-Konflikte pro Hunk lösen: ursprüngliche Absicht nachvollziehen, kein neues Verhalten erfinden, niemals --abort |
@@ -238,18 +238,12 @@ Der Kernansatz orientiert sich an [oh-my-openagent](https://github.com/code-yeon
 
 ### Iterations-Meilensteine
 
-| Phase | Wesentliche Änderungen |
-| --- | --- |
-| **v1–v7 (Grundlagen)** | Dual-Modell-Bindung, Agent-Rollensystem, Intent Gate/Klassifikations-Routing, AGENTS.md globale Regeln, Skills-Verzeichnis & Befehlsaliase, Berechtigungsbasis |
-| **v8–v12 (Review + Specs)** | Verbessertes Code-Review (Stufen/Selbstprüfung/Ablehnungskriterien), Etablierung des spec-workflow (explore→propose→apply→archive), neue Skills deepwork/reflect/verification-planning, gh-cli auf v2.96+ abgestimmt |
-| **v13–v15 (Verträge + Straffung)** | AGENTS.md ergänzt um Evidence Discipline / Task Rejection Contract / Stop Condition; vollständige Deduplizierung von Agent-Prompts und globalen Regeln; Fehlerprüfung für Hintergrund-Subagenten |
-| **v16–v18 (Effiziente Ausführung)** | Mythische Namen entfernt, Routing-Tabellen konsolidiert, gh-cli auf Issues 2.0 erweitert, spec-workflow um Verify + Entscheidungsframework ergänzt |
-| **v19 (Upstream-Abgleich)** | 6 Upstream-Repositories überprüft; `/review-pr` Zeilenkommentar-Bug behoben; Code-Review-Routing von roher Zeilenzahl auf effektive Logikmenge umgestellt |
-| **v20 (Refactoring)** | `agent/`→`agents/` an OpenCode-Empfehlung angepasst; AGENTS.md um 22 % gestrafft (290→227 Zeilen); neue Skills `diagnose` (6-Phasen-Debugging) + `handoff` (Sitzungsübergabe); spec-workflow um `/update` ergänzt; Code-Review um Entropie-Scan + Konvergenz-Prüfung erweitert; Agent-Prompts um 20 % dedupliziert |
-| **v21 (Umfassende Verschlankung)** | Skills 18→17 (deepwork/conventional-commits/diagnose entfernt, writing-great-skills/shared-language hinzugefügt); Befehle 29→18 (−38 %); AGENTS.md 227→212 Zeilen (−7 %); Skills satzweise auf No-Op getrimmt. Code-Review zweiachsig parallel + Kalibrierungsdatei-Mechanismus. Praxiserkenntnisse aus 6 Repositories (pi/deepreview/mattpocock u. a.) integriert. |
-| **v22 (Schema-Validierung & Verschlankung)** | OpenCode- und DCP-Schema abgeglichen: ungültigen Dead-Key `agent.fallback` entfernt; alle `dcp.jsonc`-Schlüssel als gültig bestätigt (v3.1.14), null Änderungen, kein blindes Hinzufügen; AGENTS.md: „Token-Effizienz" in „Kontextmanagement" integriert und vollständig dedupliziert, hängende `Self-Verification`-Referenz behoben (212→197 Zeilen); Orchestrator: drei Routing-Tabellen konsolidiert (128→79 Zeilen, −38 %, Intent Gate/Agent Directory/Fallback vollständig erhalten); 14 Skills: vom Parser ignorierte `license/compatibility/metadata`-Frontmatter entfernt (−70 Zeilen); `tool_output`-Limit auf proaktive Token-Einsparung gesenkt (1500 Zeilen/40 KB). |
-| **v23 (Doppelte Disziplin + Konsolidierung)** | Basierend auf 6 Upstream-Repositories finale Integration: `gh-skill` entfernt (Funktionalität in `gh-cli` Agent Skills-Abschnitt integriert, −122 Zeilen); tote Referenz in `verification-planning` behoben; AGENTS.md um zwei von Pi inspirierte Disziplinen ergänzt (erst antworten, dann ändern + Haltung klarstellen; globale Knappheit) + Slim-Delegationsvertrag + Job Board + Deepreview-Datei-IPC (+15 Zeilen); Orchestrator-Tabelle in Pro/Flash-Untertabellen umstrukturiert, 79→86; Reviewer um Default-Ablehnungshaltung des Verifizierers ergänzt (+6 Zeilen); gh-cli Agent Skills-Abschnitt verstärkt (+10 Zeilen). Netto ~−90 Zeilen, Skills 17→16. |
-| **v24 (Merge-Disziplin + Aktualisierung)** | `resolving-merge-conflicts` Skill hinzugefügt (Hunk-basierte Konfliktlösung: ursprüngliche Absicht, kein neues Verhalten, kein --abort); gh-cli Referenz auf v2.97 aktualisiert; Design-Referenzen überarbeitet (mattpocock→Konfliktlösungs-Disziplin, deepreview→neuheitsbasierte Konvergenz, cli/cli→v2.97) |
+25 Iterationen seit v1, kontinuierlich an Upstream-Best Practices ausgerichtet:
+
+- **v1-v7 (Grundlage)**: Dual-Model-Bindung, Agent-Rollensystem, Intent-Gate-Routing, AGENTS.md globale Regeln, Skills-Verzeichnis, Berechtigungsbasis
+- **v8-v15 (Review + Specs + Verträge)**: code-review Zwei-Achsen-Kalibrierung, spec-workflow, gh-cli-Ausrichtung, Ablehnungsvertrag, Hintergrundprüfungen
+- **v16-v22 (Kontinuierliche Verschlankung)**: Befehle 29→18 (-38%), AGENTS.md 290→211 (-27%), No-Op-Satztrimmen, Schema-Validierung
+- **v23-v25 (Ausrichtung + Sicherheit)**: 6 Upstream-Repos integriert, gh-cli v2.97 Escape-Injection-Warnung, procedure-driven Prompt-Verfeinerung, DCP-Fenster-Tuning
 
 ## Repository-Struktur
 
@@ -271,7 +265,7 @@ Der Kernansatz orientiert sich an [oh-my-openagent](https://github.com/code-yeon
 │   ├── skills/                       # 17 On-Demand-Skills
 │   │   ├── code-review/              # Zweiachsiges paralleles Review + Schweregrad-Kalibrierung
 │   │   ├── codemap/                  # Repository-Strukturdiagramm generieren
-│   │   ├── gh-cli/                   # GitHub CLI v2.97+-Referenz
+│   │   ├── gh-cli/                   # GitHub CLI v2.97+-Referenz + Sicherheitswarnung
 │   │   ├── git-master/               # Fortgeschrittene Git-Operationen
 │   │   ├── git-release/              # Tag-Release
 │   │   ├── resolving-merge-conflicts/ # Hunk-basierte Merge-Konfliktlösung

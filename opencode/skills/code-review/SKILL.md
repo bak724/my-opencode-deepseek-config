@@ -41,71 +41,50 @@ public API/wire contract. These are where a missed finding costs the most.
 Abbreviated is the default — it costs ~an order of magnitude fewer tokens.
 State which path you took, the effective size, and any stakes trigger in one line.
 
-## Dual-Axis Review (two parallel passes)
+## Review dimensions (dual-axis)
 
-For standard and full reviews, dispatch TWO parallel sub-review passes:
+Dispatch TWO parallel passes covering all dimensions the diff touches. Skip
+dimensions with no relevant changes — don't pad.
 
-1. **Standards axis** — style, naming, structure, comments, imports, error
-   handling. Check against AGENTS.md Anti-Patterns and Code Style rules.
-2. **Spec axis** — correctness, boundary conditions, security, performance.
-   Check against the stated task/feature requirements.
+### Standards axis — style, naming, structure, comments, imports, error handling
 
-Run both passes concurrently. After both complete, merge their findings:
-deduplicate (same issue found by both), sort by severity, produce a single
-report with the axis source tagged on each finding.
+Check against AGENTS.md Anti-Patterns and Code Style rules:
 
-### Standards Axis Checklist (inline — pass with task dispatch)
+1. **Maintainability** — naming (no catch-all files, descriptive filenames, no
+   import aliases), function size, magic numbers, duplicated logic, convention
+   drift, no wildcard imports, no commented-out code.
+2. **Docs & comments** — why not what, no AI filler words, no emoji, no stale
+   docs. Enforce AGENTS.md Comment Discipline and Anti-Patterns.
+3. **Compatibility** — breaking API/signature changes, altered public contracts,
+   changed defaults, DB/schema migrations, callers left unupdated.
 
-Check every changed file against:
-- [ ] Style: const/let usage, early returns, functional array methods
-- [ ] Naming: no catch-all files, descriptive filenames, no import aliases
-- [ ] Structure: no wildcard imports, no commented-out code, no empty catch
-- [ ] Comments: why not what, no AI filler words, no emoji
-- [ ] Imports: named imports only, no unused imports, no alias
-- [ ] Error handling: no empty catch, no @ts-ignore without comment
+### Spec axis — correctness, boundaries, security, performance
 
-### Spec Axis Checklist (inline — pass with task dispatch)
-
-Check every changed function/logic path against:
-- [ ] Correctness: Does it do what the requirements say?
-- [ ] Boundaries: null/undefined, empty arrays, zero values, max values
-- [ ] Security: injection, auth, secrets, path traversal, deserialization
-- [ ] Performance: N+1 queries, unnecessary loops, large allocations
-- [ ] Concurrency: race conditions, shared mutable state (if applicable)
-
-## Mechanical scan (before dimension review)
-
-A quick scan for mechanical issues:
-
-- **Duplicates:** Any block of code (6+ lines) that appears verbatim in 2+ places
-  within the diff? Flag as potential copy-paste.
-- **Pattern drift:** Does this change follow the same patterns as adjacent code
-  (naming, error-handling style, file structure)? Flag deviations.
-- **Naming mismatch:** Do new identifiers use consistent terminology with the
-  rest of the file? Flag synonyms used for the same concept.
-- **Dead imports:** Any new import that has no usage in the added code? Flag.
-
-Report mechanical findings in a single block before dimensions.
-
-## Review dimensions
-
-Cover every dimension that the diff actually touches. Skip dimensions with no
-relevant changes rather than padding the report.
+Check against the stated task/feature requirements:
 
 1. **Correctness** — logic bugs, off-by-one, null/undefined, unhandled edge
-   cases, error paths.
+   cases, error paths. No empty catch, no `@ts-ignore` without comment.
 2. **Security** — injection, XSS, authz/authn gaps, secrets, path traversal,
    SSRF, unsafe deserialization. Load `security-review` skill if any apply.
 3. **Performance** — N+1 queries, unbounded loops/allocations, blocking calls
    on hot paths, missing pagination/timeouts, leaks.
 4. **Architecture** — inappropriate coupling, leaky abstractions, wrong-layer
-   responsibility, needless complexity.
-5. **Maintainability** — naming, function size, magic numbers, dead code,
-   duplicated logic, convention drift.
-6. **Docs & comments** — Enforce AGENTS.md Comment Discipline and Anti-Patterns
-   (commented-out code, AI boilerplate, stale docs).
-7. **Compatibility** — breaking API/signature changes, altered public contracts,
-   changed defaults, DB/schema migrations, callers left unupdated.
+   responsibility, needless complexity, race conditions (if applicable).
+
+Run both passes concurrently. After both complete, merge: deduplicate (same
+issue found by both), sort by severity, tag each finding with its axis source.
+
+### Mechanical scan (before dimension review)
+
+Quick scan before the dual-axis passes:
+
+- **Duplicates:** 6+ identical lines in 2+ places within diff → flag as copy-paste.
+- **Pattern drift:** new code doesn't follow adjacent patterns (naming, error
+  handling, file structure) → flag deviation.
+- **Naming mismatch:** new identifiers use different terms for same concept → flag.
+- **Dead imports:** new import with no usage in added code → flag.
+
+Report mechanical findings in one block before the dimensional review.
 
 Before reporting, silently verify: read every changed file end-to-end; check
 unused imports, leftover TODOs, debug prints; confirm new functions have callers.
@@ -156,39 +135,26 @@ low-priority finding from being flagged as high in every review.
 
 ## Self-skepticism check (before output)
 
-Before writing any finding, silently run this adversarial check. Default to
-**rejection** — a finding earns its place only by surviving scrutiny:
+Default to **rejection** — every finding must survive scrutiny. Run three checks
+before writing any finding:
 
-1. **Could I disprove this?** Build a counter-argument. "This is fine because…
-   the error handler on line N already covers this / it only fires on admin
-   paths / the input is validated upstream at line M." If the counter-argument
-   is stronger than the finding, discard it.
-2. **Is the severity inflated?** Would the severity hold up under a second
-   reviewer's scrutiny? If you have to stretch to justify "critical," it's not
-   critical. Downgrade by one level if unsure.
-3. **Is this a real issue or a preference?** "This variable name could be
-   better" is not a finding unless it causes real confusion. Style preferences
-   that the project doesn't enforce are not review items.
+1. **Falsifiability** — build a counter-argument. If the counter ("it only fires
+   on admin paths / input is validated upstream at line M") is stronger than the
+   finding, discard it.
+2. **Severity** — would this hold under a second reviewer? Downgrade if unsure.
+3. **Preference vs defect** — style opinions the project doesn't enforce are not
+   review items.
 
-**Reject a finding immediately if any of these conditions apply** (borrowed from
-deepreview's validator rejection rules, condensed):
+Also reject immediately when a finding:
+- cites a wrong `file:line` or code outside the diff's blast radius
+- targets pre-existing, unchanged code (note as context at most)
+- inflates severity beyond the project's threat model
+- states a design/style opinion as objective defect
+- duplicates another finding
+- flags a documented, intentional decision
 
-- The cited `file:line` is wrong or the code isn't actually in the diff's blast
-  radius.
-- It targets **pre-existing, unchanged** code this diff didn't touch (note it as
-  context at most — it is not a review item for this change).
-- The severity is inflated relative to the project's threat model (see
-  calibration above).
-- It is a pure design/style **opinion** the project doesn't enforce.
-- It **duplicates** another finding — merge, don't list twice.
-- It is a documented, intentional decision (see suppression above).
-
-Only surface findings that survive all three questions and none of the rejection
-rules.
-
-Before confirming any finding, write one sentence arguing why it might be wrong,
-irrelevant, or not worth fixing. If the counterargument is stronger than the
-finding, downgrade or dismiss it.
+Before confirming any finding, write one sentence arguing why it might be wrong.
+If the counterargument is stronger, downgrade or dismiss.
 
 Lead with a one-line severity summary:
 `critical: N | major: N | minor: N | nit: N` and the path taken (abbreviated/full).
@@ -281,21 +247,11 @@ Track iteration count and novelty breakdown at each round. Report:
 
 ## Posting to a PR
 
-To publish findings on GitHub (e.g. `/review-pr`), use the `gh-cli` skill.
-`gh pr review` posts **only** a top-level verdict + body (`--approve` /
-`--comment` / `--request-changes` with `--body`); it has **no** flag for per-line
-comments. To attach findings to specific lines, post a single pending review via
-the REST API:
-
-```bash
-gh api repos/{owner}/{repo}/pulls/<n>/reviews --method POST \
-  -f event=COMMENT -f body="severity summary…" \
-  -F 'comments[][path]=src/app.ts' -F 'comments[][line]=42' \
-  -F 'comments[][body]=<!-- cr:auth-nullcheck-L42 --> issue…'
-```
-
-Use `event=COMMENT` (never auto-`APPROVE` — leave the verdict to a human). Line
-numbers must be the **new-side** line inside a changed hunk.
+To publish findings on GitHub (e.g. `/review-pr`), load the `gh-cli` skill.
+`gh pr review` posts only a top-level verdict; per-line comments require the
+REST API — see gh-cli skill ("Reviewing PRs" section) for the `gh api` pattern.
+Use `event=COMMENT` (never auto-`APPROVE`). Line numbers must be the **new-side**
+line inside a changed hunk.
 
 Place each finding at the tightest scope its location allows (3-tier placement):
 

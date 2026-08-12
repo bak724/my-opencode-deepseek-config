@@ -214,7 +214,7 @@ OpenCode는 네이티브 `skill` 도구를 통해 필요 시 스킬을 노출합
 | --- | --- |
 | `code-review` | 이중 축 병렬 리뷰(규범 + 스펙) + 심각도 보정 |
 | `codemap` | 주석이 포함된 저장소 구조도 생성, 탐색 토큰 절약 |
-| `gh-cli` | GitHub CLI v2.97+ 전체 참조(Issues 2.0, copilot, agent-task, gh skill) |
+| `gh-cli` | GitHub CLI v2.97+ 전체 참조(Issues 2.0, copilot, agent-task, gh skill) + 보안 경고 (이스케이프 인젝션) |
 | `git-master` | 고급 Git 작업: rebase, squash, bisect, reflog, worktree |
 | `git-release` | 태그 릴리스: SemVer 추론, 릴리스 노트, gh release 명령 |
 | `resolving-merge-conflicts` | hunk별 병합 충돌 해결: 원래 의도 추적, 새로운 동작 발명 금지, 절대 --abort 사용 안 함 |
@@ -238,18 +238,12 @@ OpenCode는 네이티브 `skill` 도구를 통해 필요 시 스킬을 노출합
 
 ### 반복 마일스톤
 
-| 단계 | 주요 변경 사항 |
-| --- | --- |
-| **v1-v7(기반)** | 듀얼 모델 바인딩, 에이전트 역할 체계, 의도 게이트/분류 라우팅, AGENTS.md 전역 규칙, skills 디렉터리와 명령 별칭, 권한 기준 |
-| **v8-v12(리뷰+스펙)** | code-review 강화(등급 분류/자체 검사/거부 기준), spec-workflow 구축(explore→propose→apply→archive), deepwork/reflect/verification-planning 추가, gh-cli v2.96+ 정렬 |
-| **v13-v15(계약+간소화)** | AGENTS.md에 Evidence Discipline / Task Rejection Contract / stop condition 추가; 에이전트 프롬프트와 전역 규칙 전체 중복 제거; 백그라운드 서브 에이전트 오류 확인 보완 |
-| **v16-v18(효율적 실행)** | 신화적 명칭 제거, 라우팅 테이블 통합, gh-cli Issues 2.0으로 확장, spec-workflow에 verify + 의사 결정 프레임워크 추가 |
-| **v19(업스트림 정렬)** | 6개 업스트림 저장소 재검토; `/review-pr` 줄 단위 코멘트 버그 수정; code-review 라우팅을 단순 줄 수에서 유효 로직 규모로 변경 |
-| **v20(리팩터링 최적화)** | `agent/`→`agents/` OpenCode 권장 사항 정렬; AGENTS.md 22% 간소화(290→227줄); `diagnose`(6단계 디버깅) + `handoff`(세션 인수인계) 스킬 추가; spec-workflow에 `/update` 추가; code-review에 엔트로피 스캔+수렴 검사 추가; 에이전트 프롬프트 20% 중복 제거 |
-| **v21(전면 다이어트 리팩터링)** | 스킬 18→17(deepwork/conventional-commits/diagnose 제거, writing-great-skills/shared-language 추가); 명령 29→18(-38%); AGENTS.md 227→212줄(-7%); 스킬 문장별 no-op 가지치기. code-review 이중 축 병렬 + 보정 파일 메커니즘. pi/deepreview/mattpocock 등 6개 저장소 실전 경험 참고. |
-| **v22(스키마 검증 다이어트)** | OpenCode 및 DCP 공식 스키마 검증: 무효한 `agent.fallback` 데드 키 삭제; `dcp.jsonc` 모든 키 유효 확인(v3.1.14), 변경 없이 맹목적 추가 금지; AGENTS.md '토큰 효율성'을 '컨텍스트 관리'로 병합 및 전체 중복 제거, `Self-Verification` dangling 참조 수정(212→197줄); orchestrator 세 개 라우팅 테이블 병합(128→79줄, -38%, Intent Gate/Agent Directory/Fallback 모두 보존); 14개 스킬에서 파서가 무시하는 `license/compatibility/metadata` frontmatter 제거(-70줄); `tool_output` 능동적 토큰 절약 하향 조정(1500줄/40KB). |
-| **v23(이중 규율 통합+간소화 병합)** | 6개 업스트림 저장소 최종 통합: `gh-skill` 삭제(기능 `gh-cli` Agent Skills 절로 병합, -122줄); `verification-planning` 데드 참조 수정; AGENTS.md에 Pi 영감 이중 규율(먼저 답변 후 수정+입장 표명) + slim 위임 계약+잡 보드 + deepreview 파일 IPC 추가(+15줄); orchestrator 테이블 Pro/Flash 하위 테이블로 재구성, 79→86; reviewer에 검증자 기본 거부 입장 추가(+6줄); gh-cli Agent Skills 절 강화(+10줄). 순감소 ~90줄, skills 17→16. |
-| **v24(병합 충돌 해결+gh 업데이트)** | `resolving-merge-conflicts` 스킬 추가(hunk별 충돌 해결 규율); `gh-cli` v2.96→v2.97 업데이트; deepreview 용어 정비(엔트로피 스캔→novelty-based convergence); 설계 결정 문단에 conflict resolution discipline 참조 추가. skills 16→17. |
+v1 이후 25회 반복, 지속적으로 업스트림 모범 사례에 정렬:
+
+- **v1-v7 (기반)**: 듀얼 모델 바인딩, 에이전트 역할 시스템, 의도 게이트 라우팅, AGENTS.md 글로벌 규칙, Skills 디렉토리, 권한 기준
+- **v8-v15 (리뷰 + 사양 + 계약)**: code-review 듀얼 축 보정, spec-workflow, gh-cli 정렬, 거부 계약, 백그라운드 확인
+- **v16-v22 (지속적 슬림화)**: 명령 29→18 (-38%), AGENTS.md 290→211 (-27%), no-op 트리밍, 스키마 검증
+- **v23-v25 (정렬 + 보안)**: 6개 업스트림 저장소 통합, gh-cli v2.97 이스케이프 인젝션 경고, procedure-driven 프롬프트 개선, DCP 창 튜닝
 
 ## 저장소 구조
 
@@ -271,7 +265,7 @@ OpenCode는 네이티브 `skill` 도구를 통해 필요 시 스킬을 노출합
 │   ├── skills/                   # 17개 필요 시 로드 스킬
 │   │   ├── code-review/          # 이중 축 병렬 리뷰 + 심각도 보정
 │   │   ├── codemap/              # 저장소 구조도 생성
-│   │   ├── gh-cli/               # GitHub CLI v2.97+ 참조
+│   │   ├── gh-cli/               # GitHub CLI v2.97+ 참조 + 보안 경고
 │   │   ├── git-master/           # 고급 Git 작업
 │   │   ├── git-release/          # 태그 릴리스
 │   │   ├── handoff/              # 세션을 인수인계 문서로 압축

@@ -79,15 +79,14 @@ task half-done.
 
 Every token spent is a cost — treat context as a scarce budget.
 
-- **Delegate, don't accumulate.** Large files should be read by subagents, not
-  loaded into the orchestrator's context. Use explore agents for broad searches.
+- **Delegate, don't accumulate.** Large files → subagents, not orchestrator
+  context. Use explore agents for broad searches. When a line of inquiry has
+  run its course, carry forward the plan and findings, not the raw transcript.
 - **Delegation contract.** Every delegation must specify the verification owner
   and allowed write scope. After a subagent rejects a task, adjust the scope or
   reassign — never retry the identical task on the same agent.
 - **Parallelize independent reads.** When you need 3+ independent files, fire
   all reads in a single batch.
-- **Compress aggressively.** When a line of inquiry has run its course, carry
-  forward the plan and findings, not the raw exploration transcript.
 - **One topic per subagent.** Don't ask one subagent to research AND implement.
 - **Subagent results, not raw files.** Subagents return a concise summary
   directly — orchestrator consumes their result, not raw output files. The

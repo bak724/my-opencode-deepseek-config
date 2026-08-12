@@ -214,7 +214,7 @@ OpenCode exposes skills on-demand via the native `skill` tool—Agents only load
 | --- | --- |
 | `code-review` | Dual-axis parallel review (specifications + conventions) + severity calibration |
 | `codemap` | Generates annotated repository structure maps to save exploration tokens |
-| `gh-cli` | Comprehensive reference for GitHub CLI v2.97+ (Issues 2.0, copilot, agent-task, gh skill, project by-name) |
+| \`gh-cli\` | Comprehensive reference for GitHub CLI v2.97+ (Issues 2.0, copilot, agent-task, gh skill, project by-name) + security advisory (escape injection) |
 | `git-master` | Advanced Git operations: rebase, squash, bisect, reflog, worktree |
 | `git-release` | Tag releases: SemVer inference, release notes, gh release commands |
 | `resolving-merge-conflicts` | Resolve merge conflicts per-hunk: trace original intent, never invent behavior, never --abort |
@@ -238,18 +238,12 @@ Core concepts draw inspiration from [oh-my-openagent](https://github.com/code-ye
 
 ### Iteration Milestones
 
-| Phase | Key Changes |
-| --- | --- |
-| **v1-v7 (Foundation)** | Dual-model binding, agent role system, intent gate/classification routing, global AGENTS.md rules, skills directory & command aliases, permission baseline |
-| **v8-v12 (Review + Specs)** | Enhanced code-review (tiering/self-check/rejection criteria), established spec-workflow (explore→propose→apply→archive), added deepwork/reflect/verification-planning, gh-cli aligned to v2.96+ |
-| **v13-v15 (Contracts + Streamlining)** | Added Evidence Discipline / Task Rejection Contract / stop condition to AGENTS.md; fully deduplicated agent prompts & global rules; completed background sub-agent error checks |
-| **v16-v18 (Efficient Execution)** | Removed mythological names, merged routing tables, expanded gh-cli to Issues 2.0, added verify + decision framework to spec-workflow |
-| **v19 (Upstream Alignment)** | Reviewed 6 upstream repos; fixed `/review-pr` inline comment bug; changed code-review routing from raw line count to effective logical volume |
-| **v20 (Refactoring Optimization)** | `agent/`→`agents/` aligned with OpenCode recommendations; AGENTS.md streamlined by 22% (290→227 lines); added `diagnose` (6-stage debugging) + `handoff` (session handoff) skills; spec-workflow added `/update`; code-review added entropy scanning + convergence checks; agent prompts deduplicated by 20% |
-| **v21 (Comprehensive Slimming)** | Skills reduced from 18→17 (removed deepwork/conventional-commits/diagnose, added writing-great-skills/shared-language); commands reduced from 29→18 (-38%); AGENTS.md reduced from 227→212 lines (-7%); sentence-by-sentence no-op trimming on skills. Dual-axis parallel code-review + calibration file mechanism. Leveraged practical experience from 6 repos like pi/deepreview/mattpocock. |
-| **v22 (Schema Validation Slimming)** | Verified against official OpenCode & DCP schemas: removed invalid `agent.fallback` dead key; confirmed all `dcp.jsonc` keys are valid (v3.1.14), zero blind additions; merged 'Token Efficiency' into 'Context Management' in AGENTS.md, fully deduplicated, fixed dangling `Self-Verification` reference (212→197 lines); merged orchestrator's three routing tables (128→79 lines, -38%, Intent Gate/Agent Directory/Fallback all preserved); stripped ignored `license/compatibility/metadata` frontmatter from 14 skills (-70 lines); downgraded `tool_output` to proactive token savings (1500 lines/40KB). |
-| **v23 (Dual Discipline Integration + Merge Slimming)** | Final integration based on 6 upstream repos: removed `gh-skill` (functionality merged into `gh-cli` Agent Skills section, -122 lines); fixed `verification-planning` dead reference; AGENTS.md added two Pi-inspired disciplines (answer first then modify + state position, global brevity) + slim delegation contract + job board + deepreview file IPC (+15 lines); orchestrator table restructured into Pro/Flash sub-tables, 79→86; reviewer reinforced verifier default-reject stance (+6 lines); gh-cli Agent Skills section strengthened (+10 lines). Net reduction ~90 lines, skills 17→16. |
-| **v24 (Upstream v2.97 + Conflict Resolution)** | gh-cli fully upgraded to v2.97.0 (fixed 11 outdated items: gh skill/view/uninstall, agent-task signature, secret --app, telemetry deprecation, etc.); added `project` by-name editing, `issue develop`, `org list`, `label clone` commands; code-review: renamed entropy scan → Mechanical scan, enhanced convergence with converging/deadlocked/diverging triage; added `resolving-merge-conflicts` (from mattpocock/skills, ~200 tokens); calibration.yml now has 3 active downgrade rules. skills 16→17. |
+25 iterations since v1, continuously aligning with upstream best practices:
+
+- **v1-v7 (Foundation)**: Dual-model binding, agent role system, intent-gate routing, AGENTS.md global rules, skills directory, permission baseline
+- **v8-v15 (Review + Specs + Contracts)**: code-review dual-axis calibration, spec-workflow, gh-cli alignment, rejection contract, background checks
+- **v16-v22 (Continuous Slimming)**: Commands 29→18 (-38%), AGENTS.md 290→211 (-27%), no-op sentence trimming, schema validation dead-key removal
+- **v23-v25 (Alignment + Security)**: Integrated 6 upstream repos, gh-cli v2.97 escape-injection advisory, procedure-driven prompt refinement, DCP window tuning
 
 ## Repository Structure
 
@@ -271,7 +265,7 @@ Core concepts draw inspiration from [oh-my-openagent](https://github.com/code-ye
 │   ├── skills/                   # 17 on-demand skills
 │   │   ├── code-review/          # dual-axis parallel review + severity calibration
 │   │   ├── codemap/              # generates repository structure map
-│   │   ├── gh-cli/               # GitHub CLI v2.97+ reference
+│   │   ├── gh-cli/               # GitHub CLI v2.97+ reference + security advisory
 │   │   ├── git-master/           # advanced Git operations
 │   │   ├── git-release/          # Tag releases
 │   │   ├── handoff/              # compress sessions into handoff docs
