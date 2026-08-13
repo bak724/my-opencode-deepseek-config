@@ -12,7 +12,7 @@
 - Isolamento de modelos: bloqueio duplo com `enabled_providers: ["deepseek"]` + `disabled_providers`
 - Compartilhamento de sessão: desativado (`share: "disabled"`); snapshots: ativados (`snapshot: true`)
 - Baseline de permissões: permitir por padrão, comandos bash destrutivos configurados como `ask`; arquivos sensíveis como `.env` com `deny`; diretórios externos com `ask`
-- Compressão de contexto: compressão proativa via DCP (limiar 35K–75K) + compactação nativa do OpenCode como fallback
+- Compressão de contexto: compressão proativa via DCP (limiares percentuais 60%/30%, adaptativos à janela do modelo) + compactação nativa do OpenCode como fallback (prune remove saídas antigas de ferramentas)
 - Regras globais: `AGENTS.md` (princípios fundamentais, contrato de recusa de tarefas, eficiência de contexto e tokens, autoverificação, antipadrões, etc.)
 - Skills: **17** arquivos `SKILL.md` no diretório `skills/`, carregados sob demanda pela ferramenta nativa `skill`
 - Plugins: `superpowers` (14 skills de processo), `@tarquinen/opencode-dcp` (poda inteligente de contexto)
@@ -212,9 +212,9 @@ O OpenCode expõe skills sob demanda pela ferramenta nativa `skill` — os agent
 
 | Skill | Função |
 | --- | --- |
-| `code-review` | Revisão paralela em dois eixos (convenções + especificação) + calibração de severidade |
+| `code-review` | Revisão paralela em dois eixos (convenções + especificação) + calibração de severidade + classificação de achados confirmed/plausible (trivial encaminhado a doc drift) com validação de saída pelo Validator pass |
 | `codemap` | Gerar mapa anotado da estrutura do repositório, economizando tokens de exploração |
-| `gh-cli` | Referência completa do GitHub CLI v2.97+ (Issues 2.0, copilot, agent-task, gh skill) + alerta de segurança (injeção de escape) |
+| `gh-cli` | Referência completa do GitHub CLI v2.97+ (Issues 2.0, copilot, agent-task, gh skill, inventário de pendências via gh status) + alerta de segurança (injeção de escape) |
 | `git-master` | Operações avançadas de Git: rebase, squash, bisect, reflog, worktree |
 | `git-release` | Release com tag: inferência de SemVer, notas de release, comando gh release |
 | `resolving-merge-conflicts` | Resolver conflitos de merge por hunk: rastrear intenção original, nunca inventar comportamento, nunca --abort |
@@ -228,22 +228,24 @@ O OpenCode expõe skills sob demanda pela ferramenta nativa `skill` — os agent
 | `spec-workflow` | Alterações leves orientadas a especificação (propose → design → tasks → implement → archive) |
 | `verification-planning` | Planejar o caminho mais restrito de verificação antes da implementação |
 | `verify-with-docs` | Verificar assinaturas de API na documentação antes de codificar — retrieval-first, prevenindo alucinações |
-| `writing-great-skills` | Diretrizes para escrever skills: poda de no-ops, formulação positiva, critérios de conclusão |
+| `grilling` | Entrevista de alinhamento de requisitos: uma pergunta por vez, prioridade a múltipla escolha, agir só após convergir ambiguidades (corresponde à disciplina de perguntas do AGENTS.md) |
 
 ## Decisões de design e registro de iterações
 
 A abordagem central foi inspirada nos pontos fortes de [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent) (gate de intenção, isolamento de somente leitura, antipadrões), [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim) (orquestrador prioritário, cadeia de fallback, contrato de recusa), [anomalyco/opencode](https://github.com/anomalyco/opencode) (schema de configuração, ecossistema de skills), [cli/cli](https://github.com/cli/cli) (gh v2.97, conjunto completo de comandos), [OpenSpec](https://github.com/Fission-AI/OpenSpec) (delta specs, atualização de propostas de alteração), [mattpocock/skills](https://github.com/mattpocock/skills) (disciplina de resolução de conflitos, documentos de transição), [pi](https://github.com/earendil-works/pi) (responder primeiro, editar depois; respostas concisas) e [deepreview](https://github.com/mechanai/deepreview) (convergência baseada em novidade, roteamento por tamanho efetivo). Implementação puramente por configuração, zero dependências adicionais.
 
 > **Inspiração, não cópia**: pipelines excessivamente pesados tiveram apenas seus princípios de design leve absorvidos; funcionalidades redundantes são cobertas pelos agents/skills existentes, sem adições. Seguindo o princípio "enxugar antes de adicionar", cada iteração visa a redução líquida de tokens.
+> Origem dos mecanismos desta rodada: grilling vem de mattpocock/skills; classificação de achados / tabela de palavras-sinal / marcação de pontos consensuais inspirados nos mecanismos leves do deepreview; gh status acrescentado do manual do cli/cli v2.97.
 
 ### Marcos das iterações
 
-25 iterações desde a v1, continuamente alinhadas com as melhores práticas:
+26 iterações desde a v1, continuamente alinhadas com as melhores práticas:
 
 - **v1-v7 (Fundação)**: Vinculação de modelo duplo, sistema de funções de agentes, roteamento por intenção, regras globais AGENTS.md, diretório skills, base de permissões
 - **v8-v15 (Revisão + Specs + Contratos)**: code-review calibração de eixo duplo, spec-workflow, alinhamento gh-cli, contrato de rejeição, verificações em segundo plano
 - **v16-v22 (Emagrecimento contínuo)**: Comandos 29→18 (-38%), AGENTS.md 290→211 (-27%), corte no-op, validação de esquema
 - **v23-v25 (Alinhamento + Segurança)**: 6 repositórios upstream integrados, gh-cli v2.97 alerta de injeção de escape, refinamento procedure-driven de prompts, ajuste DCP
+- **v26 (Enxugamento desta rodada)**: prune:true e tool_output 800/20480 mais restritos, DCP migrado para limiares percentuais 60%/30%, grilling no lugar de writing-great-skills, opencode-config 131→64 enxugado, code-review classificação de achados + validator, gh-cli acrescenta gh status, AGENTS.md ganha User Override, disciplina de custo de delegação do orchestrator, 7 arquivos de agentes com redução líquida de 22 linhas
 
 ## Estrutura do repositório
 
@@ -279,10 +281,10 @@ A abordagem central foi inspirada nos pontos fortes de [oh-my-openagent](https:/
 │   │   ├── spec-workflow/        # Desenvolvimento orientado a especificação
 │   │   ├── verification-planning/ # Planejamento do caminho de verificação pré-implementação
 │   │   ├── verify-with-docs/     # Verificação de API retrieval-first
-│   │   └── writing-great-skills/ # Diretrizes para escrever skills
+│   │   └── grilling/             # Entrevista de alinhamento de requisitos
 │   ├── opencode.jsonc            # Configuração principal (18 comandos)
-│   ├── AGENTS.md                 # Regras globais (~212 linhas)
-│   └── dcp.jsonc                 # Compressão de contexto DCP (DeepSeek 128K)
+│   ├── AGENTS.md                 # Regras globais (206 linhas)
+│   └── dcp.jsonc                 # Compressão de contexto DCP (DeepSeek 128K, limiares percentuais 60%/30%)
 ├── README.md
 ├── LICENSE
 └── README.*.md                   # README em outros idiomas
@@ -339,6 +341,6 @@ Descreva sua necessidade em linguagem natural — o Orchestrator analisa automat
 - **Orientado a configuração, zero dependências adicionais** — toda a capacidade é implementada por `opencode.jsonc` + `agents/*.md` + `skills/*/SKILL.md` + `AGENTS.md`
 - **Utilização máxima dos dois modelos DeepSeek V4** — Pro para raciocínio e decisão, Flash para consultas e execução leve
 - **Eficiência de tokens em primeiro lugar** — referência por caminho em vez de colar arquivos, skills carregadas sob demanda, compressão com gestão em camadas
-- **Plugins que potencializam sem tomar o protagonismo** — superpowers fornece disciplina de processo, DCP faz compressão inteligente em vez de simples truncamento
+- **Plugins que potencializam sem tomar o protagonismo** — superpowers fornece disciplina de processo, DCP faz compressão inteligente em vez de simples truncamento (limiares percentuais adaptativos, compactação nativa como fallback)
 - **Separação entre execução e exploração** — deep-worker/light-orchestrator proibidos de pesquisar/delegar; explore/librarian proibidos de modificar
 - **Melhoria contínua** — mecanismo reflect para identificar atritos, code-review com calibração em dois eixos para garantir qualidade

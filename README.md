@@ -12,7 +12,7 @@
 - 模型隔离：`enabled_providers: ["deepseek"]` + `disabled_providers` 双重锁
 - 会话分享：关闭（`share: "disabled"`）；快照：开启（`snapshot: true`）
 - 权限基线：默认放行，破坏性 bash 命令设为 `ask`；`.env` 类敏感文件 `deny`；外部目录 `ask`
-- 上下文压缩：DCP 主动压缩（35K-75K 阈值）+ OpenCode 原生 compaction 兜底
+- 上下文压缩：DCP 主动压缩（60%/30% 百分比阈值，随模型窗口自适应）+ OpenCode 原生 compaction 兜底（prune 裁旧工具输出）
 - 全局规则：`AGENTS.md`（核心原则、任务拒绝契约、上下文与 Token 效率、自我验证、反模式等）
 - 技能：`skills/` 目录下 **17 个** `SKILL.md` 技能，通过原生 `skill` 工具按需加载
 - 插件：`superpowers`（14 个过程型技能）、`@tarquinen/opencode-dcp`（智能上下文裁剪）
@@ -212,9 +212,9 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 
 | Skill | 作用 |
 | --- | --- |
-| `code-review` | 双轴并行审查（规范 + 规约）+ 严重度校准 |
+| `code-review` | 双轴并行审查（规范 + 规约）+ 严重度校准 + confirmed/plausible 发现分级（trivial 归文档漂移）与 Validator pass 输出前验证 |
 | `codemap` | 生成带标注的仓库结构图，节省探索 token |
-| `gh-cli` | GitHub CLI v2.97+ 全面参考（含转义注入安全警告、Issues 2.0、discussions、projects、agent skills、repo read-file） |
+| `gh-cli` | GitHub CLI v2.97+ 全面参考（含转义注入安全警告、Issues 2.0、discussions、projects、agent skills、repo read-file、gh status 待办盘点） |
 | `git-master` | 高级 Git 操作：rebase、squash、bisect、reflog、worktree |
 | `git-release` | Tag 发布：SemVer 推断、发布说明、gh release 命令 |
 | `resolving-merge-conflicts` | 逐 hunk 解析合并冲突：追溯原始意图、不发明新行为、永不 --abort |
@@ -228,22 +228,24 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 | `spec-workflow` | 轻量规约驱动变更（propose → design → tasks → implement → archive） |
 | `verification-planning` | 实现前规划最窄验证路径 |
 | `verify-with-docs` | 编码前核对 API 文档，检索优先，防止幻觉 |
-| `writing-great-skills` | 技能编写规范：无操作裁剪、正向表述、完成标准 |
+| `grilling` | 需求对齐访谈：一次一问、多选优先，歧义收敛后再动手（与 AGENTS.md 提问纪律对应） |
 
 ## 设计决策与迭代记录
 
 核心思路借鉴了 [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent)（意图门控、只读隔离、反模式）、[oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim)（调度器优先、后备链、拒绝契约）、[anomalyco/opencode](https://github.com/anomalyco/opencode)（配置 Schema、技能体系）、[cli/cli](https://github.com/cli/cli)（gh v2.97 完整命令集）、[OpenSpec](https://github.com/Fission-AI/OpenSpec)（delta specs、变更提案更新）、[mattpocock/skills](https://github.com/mattpocock/skills)（冲突解析纪律、交接文档）、[pi](https://github.com/earendil-works/pi)（先答后改、精简响应）和 [deepreview](https://github.com/mechanai/deepreview)（novelty 分类收敛、有效大小路由）的优点，纯配置实现，零额外依赖。
 
 > **借鉴而非照搬**：过重的流水线只汲取轻量化设计理念；冗余功能由现有 agents/skills 覆盖，不新增。遵循"精简优先于新增"原则，每次迭代都以净减 token 为目标。
+> 本轮机制来源：grilling 落地自 mattpocock/skills；发现分级/信号词表/一致点标注借鉴 deepreview 的轻量机制；gh status 增补自 cli/cli v2.97 手册。
 
 ### 迭代里程碑
 
-自 v1 以来历经 25 次迭代，持续对标上游仓库最佳实践：
+自 v1 以来历经 26 次迭代，持续对标上游仓库最佳实践：
 
 - **v1-v7（奠基）**：双模型绑定、Agent 角色体系、意图门控路由、AGENTS.md 全局规则、Skills 目录、权限基线
 - **v8-v15（审查+规约+契约）**：code-review 双轴校准、spec-workflow、gh-cli 对齐、拒绝契约、后台核查
 - **v16-v22（持续瘦身）**：命令 29→18（-38%）、AGENTS.md 290→211（-27%）、逐句 no-op 修剪、Schema 校验去死键
 - **v23-v25（对齐+安全）**：整合 6 个上游仓库、gh-cli v2.97 转义注入安全章节、procedure-driven 提示精化、DCP 窗口调优
+- **v26（本轮瘦身）**：prune:true 与 tool_output 800/20480 收紧、DCP 切换 60%/30% 百分比阈值、grilling 引入替代 writing-great-skills、opencode-config 131→64 精简、code-review 分级+validator、gh-cli 补 gh status、AGENTS.md 增 User Override、orchestrator 委托成本纪律、7 个 agent 文件净减 22 行
 
 ## 仓库结构
 
@@ -279,10 +281,10 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 │   │   ├── spec-workflow/        # 规约驱动开发
 │   │   ├── verification-planning/ # 实现前验证路径规划
 │   │   ├── verify-with-docs/     # 检索优先 API 验证
-│   │   └── writing-great-skills/ # 技能编写规范
+│   │   └── grilling/             # 需求对齐访谈
 │   ├── opencode.jsonc            # 主配置（18 条命令）
-│   ├── AGENTS.md                 # 全局规则（~212 行）
-│   └── dcp.jsonc                 # DCP 上下文压缩（DeepSeek 128K）
+│   ├── AGENTS.md                 # 全局规则（206 行）
+│   └── dcp.jsonc                 # DCP 上下文压缩（DeepSeek 128K，60%/30% 百分比阈值）
 ├── README.md
 ├── LICENSE
 └── README.*.md                   # 其他语言 README
@@ -339,6 +341,6 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 - **纯配置驱动，零额外依赖** —— 所有能力由 `opencode.jsonc` + `agents/*.md` + `skills/*/SKILL.md` + `AGENTS.md` 实现
 - **DeepSeek V4 双模型极致利用** —— Pro 做推理与决策，Flash 做查询与轻量执行
 - **Token 效率优先** —— 路径引用替代粘贴文件、技能按需加载、压缩分级管理
-- **插件增效但不喧宾夺主** —— superpowers 提供过程纪律，DCP 智能压缩替代简单截断
+- **插件增效但不喧宾夺主** —— superpowers 提供过程纪律，DCP 智能压缩替代简单截断（百分比阈值自适应，原生 compaction 兜底）
 - **执行与探索分离** —— deep-worker/light-orchestrator 禁止研究/委托，explore/librarian 禁止修改
 - **持续改进** —— reflect 机制化发现摩擦、code-review 双轴校准保证质量

@@ -53,10 +53,10 @@
     "summaryBuffer": true,
 
     // 上下文阈值（DeepSeek V4 128K 窗口调优）：
-    // 75K 开始强力推压缩（留 53K 缓冲供新内容 + 摘要）
-    "maxContextLimit": 75000,
-    // 35K 开始温和提醒模型可压缩（提前感知上下文压力）
-    "minContextLimit": 35000,
+    // 60% ≈ 原 75K/128K 的百分比等值，随模型窗口自适应
+    "maxContextLimit": "60%",
+    // 30% ≈ 原 35K/128K 的百分比等值，随模型窗口自适应
+    "minContextLimit": "30%",
 
     // 每 3 次 LLM 请求提醒一次压缩（比默认 5 更频繁，适配 token 效率目标）
     "nudgeFrequency": 3,

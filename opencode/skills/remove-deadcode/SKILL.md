@@ -1,6 +1,6 @@
 ---
 name: remove-deadcode
-description: Safely find and delete dead code — unused files, exports, functions, variables, and imports — with verification before each removal. Use when the task mentions "dead code", "unused code", "remove slop", "clean up", "prune", "delete unused", "orphaned files", or after a refactor leaves leftovers. Verifies with the toolchain/LSP before deleting so nothing that is actually referenced is removed.
+description: Safely find and delete dead code — unused files, exports, functions, variables, and imports — with verification before each removal. Use when the task mentions "dead code", "unused code", "remove slop", "clean up" (dead code cleanup), "prune", "delete unused", "orphaned files", or after a refactor leaves unused code behind. Verifies with the toolchain/LSP before deleting so nothing that is actually referenced is removed.
 ---
 
 # Remove Dead Code

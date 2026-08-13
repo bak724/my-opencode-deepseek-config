@@ -11,13 +11,13 @@ of context. Pair with `security-review` when the diff touches a trust boundary.
 
 ## Step 0 — Scope by *effective* size, not raw lines
 
-Never review blindly. Establish the change set before reading code:
+Establish the change set before reading code:
 
 - Branch vs base: `git diff --stat main...HEAD` (or the stated base)
 - PR: use the `gh-cli` skill (`gh pr diff <n> --patch`, `gh pr view <n>`)
 - Explicit files: just those paths
 
-Then weight each changed file by category — a 2000-line lockfile diff is not a
+Weight each changed file by category — a 2000-line lockfile diff is not a
 2000-line review. Sum the **effective logic lines**:
 
 | File category | Weight | Examples |
@@ -34,9 +34,9 @@ Pick the path from effective size **and** stakes:
 | **≤ 8 logic files and ≤ 300 effective lines** | **Abbreviated** (default) | Single focused pass over the diff and its immediate callers. Report inline. |
 | **larger** | **Full** | Walk each dimension deliberately; write findings to a file (see below). |
 
-**High-stakes override** — route **Full** regardless of size when any logic/config
-file touches auth/authz, DB migrations or schema, concurrency/locking, or a
-public API/wire contract. These are where a missed finding costs the most.
+**High-stakes override** — route **Full** regardless of size when any changed
+logic/config file matches: `auth|authz|migration|schema|lock|concurr|public api|
+wire contract|serializ`. A hit upgrades the depth; no hit keeps the default.
 
 Abbreviated is the default — it costs ~an order of magnitude fewer tokens.
 State which path you took, the effective size, and any stakes trigger in one line.
@@ -65,7 +65,7 @@ Check against the stated task/feature requirements:
 1. **Correctness** — logic bugs, off-by-one, null/undefined, unhandled edge
    cases, error paths. No empty catch, no `@ts-ignore` without comment.
 2. **Security** — injection, XSS, authz/authn gaps, secrets, path traversal,
-   SSRF, unsafe deserialization. Load `security-review` skill if any apply.
+   SSRF, unsafe deserialization.
 3. **Performance** — N+1 queries, unbounded loops/allocations, blocking calls
    on hot paths, missing pagination/timeouts, leaks.
 4. **Architecture** — inappropriate coupling, leaky abstractions, wrong-layer
@@ -73,6 +73,8 @@ Check against the stated task/feature requirements:
 
 Run both passes concurrently. After both complete, merge: deduplicate (same
 issue found by both), sort by severity, tag each finding with its axis source.
+A finding reported independently by both axes is highest confidence — tag it
+`highest-confidence`.
 
 ### Mechanical scan (before dimension review)
 
@@ -114,8 +116,7 @@ model (localhost tool? public service? internal tool? library?), and repo visibi
   - **v1+ public libraries**: API breaks, unvalidated input → critical/major.
 - Down-rank findings that don't apply to this project's reality. Note the
   calibration reason.
-- Prefer one accurate high-severity finding over ten inflated ones — every false
-  alarm erodes trust.
+- Prefer one accurate high-severity finding over ten inflated ones.
 - If a whole category consistently doesn't apply here, say so once and suggest
   recording it in AGENTS.md.
 
@@ -123,8 +124,7 @@ model (localhost tool? public service? internal tool? library?), and repo visibi
 
 Treat documented decisions (from caller's context note, `.opencode/decisions.md`,
 or `AGENTS.md`/`CLAUDE.md`) as intentional. Flag only when the diff makes a
-documented choice concretely unsafe (e.g. trusted-input assumption now reachable
-from an untrusted path).
+documented choice concretely unsafe.
 
 ## Calibration
 
@@ -133,10 +133,10 @@ finding whose pattern matches a calibration entry, apply the specified
 downgrade and cite the entry in the report. This prevents the same
 low-priority finding from being flagged as high in every review.
 
-## Self-skepticism check (before output)
+## Validator pass (before output)
 
-Default to **rejection** — every finding must survive scrutiny. Run three checks
-before writing any finding:
+Default to **rejection** — every finding must survive scrutiny. Verify each
+finding against four checks before writing it:
 
 1. **Falsifiability** — build a counter-argument. If the counter ("it only fires
    on admin paths / input is validated upstream at line M") is stronger than the
@@ -144,17 +144,14 @@ before writing any finding:
 2. **Severity** — would this hold under a second reviewer? Downgrade if unsure.
 3. **Preference vs defect** — style opinions the project doesn't enforce are not
    review items.
+4. **Evidence** — the citation must be correct and inside the diff's blast radius.
 
-Also reject immediately when a finding:
-- cites a wrong `file:line` or code outside the diff's blast radius
-- targets pre-existing, unchanged code (note as context at most)
-- inflates severity beyond the project's threat model
-- states a design/style opinion as objective defect
-- duplicates another finding
-- flags a documented, intentional decision
+This pass discards **disproved** findings outright: wrong `file:line`, code
+outside the blast radius, pre-existing unchanged code, severity beyond the
+threat model, style opinions stated as defects, duplicates, or documented
+intentional decisions.
 
-Before confirming any finding, write one sentence arguing why it might be wrong.
-If the counterargument is stronger, downgrade or dismiss.
+## Report format
 
 Lead with a one-line severity summary:
 `critical: N | major: N | minor: N | nit: N` and the path taken (abbreviated/full).
@@ -162,7 +159,7 @@ Lead with a one-line severity summary:
 Then list findings, ordered by severity, each as:
 
 ```
-[severity] <title>  (dimension, confidence: high|medium)
+[severity] <title>  (dimension, class: confirmed|plausible)
 <!-- id: <12-char-hash> -->  (SHA-256 of file:line:title, for loop dedup)
 location: path/to/file.ext:LINE
 issue:  <what is wrong and the input/condition that triggers it>
@@ -170,22 +167,22 @@ impact: <what breaks, or what an attacker/user gains>
 fix:    <the minimal concrete remediation a flash agent could apply>
 ```
 
-Tag each finding's **confidence** (high = verified in code, severity
-proportionate; medium = plausible but not fully traced). Lead with high-confidence
-findings within each severity level.
+Classify each finding: **confirmed** (verified at the cited line, severity
+proportionate) or **plausible** (likely but not fully traced). Lead with
+confirmed findings within each severity level. **trivial** findings (real but
+cosmetic) go to Document Drift, not the main list.
 
 Close with a short overall assessment (merge-ready? blocking items?) and a brief
-**What Looks Good** line naming the parts that are solid — it tells the author
-what not to second-guess and signals you actually read the change. If the change
-is genuinely clean, say so plainly — do not manufacture findings.
+**What Looks Good** line naming the parts that are solid. If the change is
+genuinely clean, say so plainly — do not manufacture findings.
 
 ### Doc drift batching
 
-Non-critical documentation findings (severity != critical) are batched into a
-single `## Document Drift` section as a checklist, not scattered across the
-report. Only surface a docs finding as its own entry when it is genuinely
-dangerous (a false claim that could cause API misuse, a security-critical
-misleading comment).
+Non-critical documentation findings are batched into a single `## Document Drift`
+section as a checklist, not scattered across the report. Route **trivial**
+findings here too. Only surface a docs finding as its own entry when it is
+genuinely dangerous (a false claim that could cause API misuse, a
+security-critical misleading comment).
 
 ### Large reviews — communicate through files
 
@@ -195,9 +192,7 @@ file path to the caller. This keeps large review content out of the
 orchestrator's context — the single biggest review token cost.
 
 **Response contract for file-based reviews:** after writing the file, your reply
-is *only* the summary line + the absolute path — nothing else. Do not restate
-findings in the chat; the file is the artifact. (File-IPC contract;
-deepreview's multi-agent pipeline is omitted.)
+is *only* the summary line + the absolute path — nothing else.
 
 ## Review → fix loop
 
@@ -213,57 +208,36 @@ When asked to review *and fix* (e.g. `/review-loop`), run a bounded loop:
    verification was skipped.
 5. Re-review only the changed region. Repeat.
 
-Stop conditions: **clean** (no findings above nit), **max 5 iterations**, or
-**convergence**. Classify each re-review finding as **NEW**, **RECURRING**
-(unresolved from last pass), or **REGRESSION** (reintroduced by a fix). Keep
-looping only while a pass produces NEW or REGRESSION findings above nit severity;
-once a pass yields zero such findings, stop and surface any remaining
-RECURRING findings for a human rather than thrashing on fixes that aren't
-converging. (Novelty-based convergence; deepreview's multi-agent pipeline
-omitted.)
+Classify each re-review finding as **NEW**, **RECURRING** (unresolved from last
+pass), or **REGRESSION** (reintroduced by a fix). On iterations 2+, prepend a
+`## Prior Findings` block listing findings from the previous pass (with their
+IDs). Do NOT re-report a prior finding unless it is a REGRESSION.
 
-On iterations 2+, prepend a `## Prior Findings` block listing findings from the
-previous pass (with their IDs). Do NOT re-report a prior finding unless it is
-a REGRESSION (was fixed in the interim, now broken again).
+Stop by novelty and hard cap:
 
-### Convergence check (for review→fix loops)
+- **Clean**: no critical/major findings remain.
+- **Converging + clean enough**: only minor/nit and 0 NEW in the last round — surface to the user.
+- **Deadlocked**: same RECURRING findings 2+ rounds despite fixes — the fix approach is wrong; pause and re-assess.
+- **Diverging**: regressions being introduced — stop immediately, report.
+- **Hard cap**: 5 iterations maximum — force-stop and report.
 
-Use the novelty tags from the Review → fix loop to drive convergence:
-
-- **converging**: 0 NEW findings, or NEW < previous round's NEW
-- **deadlocked**: 0 NEW but RECURRING findings persist across 2+ rounds
-- **diverging**: NEW > previous round's NEW
-
-Stop conditions:
-
-- **Clean:** No critical or major findings remain
-- **Converging + clean enough:** Only minor/nit findings and 0 NEW in last round — surface to user
-- **Deadlocked:** Same RECURRING findings appear 2+ rounds despite fixes — the fix approach is wrong; pause and re-assess
-- **Diverging:** Regressions are being introduced — stop immediately, report
-- **Hard cap:** 5 iterations maximum — force-stop and report
-
-Track iteration count and novelty breakdown at each round. Report:
+Track iteration count and novelty at each round. Report:
 `Round N: NEW=X, RECURRING=Y, REGRESSION=Z, severity: critical=A, major=B. Verdict: [converging|deadlocked|diverging|clean]. Next: [continue|stop|re-assess]`
 
 ## Posting to a PR
 
 To publish findings on GitHub (e.g. `/review-pr`), load the `gh-cli` skill.
 `gh pr review` posts only a top-level verdict; per-line comments require the
-REST API — see gh-cli skill ("Reviewing PRs" section) for the `gh api` pattern.
-Use `event=COMMENT` (never auto-`APPROVE`). Line numbers must be the **new-side**
-line inside a changed hunk.
+REST API — see the `gh-cli` skill ("Reviewing PRs" section) for the `gh api`
+pattern. Use `event=COMMENT` (never auto-`APPROVE`). Line numbers must be the
+**new-side** line inside a changed hunk.
 
 Place each finding at the tightest scope its location allows (3-tier placement):
 
 1. **Line comment** — the finding's `file:line` falls inside a changed hunk.
 2. **File-level comment** — the file is in the diff but the line is outside any
-   hunk (e.g. a caller you had to widen to).
-3. **Review body** — the finding is about a file not in the diff at all
-   (cross-cutting or blast-radius concerns).
-
-This keeps comments anchored to the diff. Triage: lines within diff hunks → line
-comment; lines in diff files but outside changed blocks → file comment; files
-not in the diff → review body only.
+   hunk.
+3. **Review body** — the finding is about a file not in the diff at all.
 
 **Re-review dedup:** embed a stable finding id (`<!-- cr:auth-nullcheck-L42 -->`)
 in each comment body. On later passes, list existing review comments (`gh pr view

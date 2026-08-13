@@ -12,7 +12,7 @@
 - Model isolation: `enabled_providers: ["deepseek"]` + `disabled_providers` double lock
 - Session sharing: disabled (`share: "disabled"`); snapshots: enabled (`snapshot: true`)
 - Permission baseline: allow by default, destructive bash commands set to `ask`; `.env`-like sensitive files set to `deny`; external directories set to `ask`
-- Context compression: DCP proactive compression (35K-75K threshold) + OpenCode native compaction fallback
+- Context compression: DCP proactive compression (60%/30% percentage thresholds, adaptive to the model window) + OpenCode native compaction as fallback (prune trims old tool outputs)
 - Global rules: `AGENTS.md` (core principles, task rejection contract, context & token efficiency, self-verification, anti-patterns, etc.)
 - Skills: **17** `SKILL.md` files in the `skills/` directory, loaded on-demand via the native `skill` tool
 - Plugins: `superpowers` (14 process-type skills), `@tarquinen/opencode-dcp` (intelligent context trimming)
@@ -212,9 +212,9 @@ OpenCode exposes skills on-demand via the native `skill` tool—Agents only load
 
 | Skill | Role |
 | --- | --- |
-| `code-review` | Dual-axis parallel review (specifications + conventions) + severity calibration |
+| `code-review` | Dual-axis parallel review (specifications + conventions) + severity calibration + confirmed/plausible finding classification (trivial routed to doc drift) with Validator pass output validation |
 | `codemap` | Generates annotated repository structure maps to save exploration tokens |
-| \`gh-cli\` | Comprehensive reference for GitHub CLI v2.97+ (Issues 2.0, copilot, agent-task, gh skill, project by-name) + security advisory (escape injection) |
+| \`gh-cli\` | Comprehensive reference for GitHub CLI v2.97+ (Issues 2.0, copilot, agent-task, gh skill, project by-name, gh status todo review) + security advisory (escape injection) |
 | `git-master` | Advanced Git operations: rebase, squash, bisect, reflog, worktree |
 | `git-release` | Tag releases: SemVer inference, release notes, gh release commands |
 | `resolving-merge-conflicts` | Resolve merge conflicts per-hunk: trace original intent, never invent behavior, never --abort |
@@ -228,22 +228,24 @@ OpenCode exposes skills on-demand via the native `skill` tool—Agents only load
 | `spec-workflow` | Lightweight spec-driven changes (propose → design → tasks → implement → archive) |
 | `verification-planning` | Plan the narrowest verification path before implementation |
 | `verify-with-docs` | Verify APIs against documentation before coding, prioritize retrieval to prevent hallucinations |
-| `writing-great-skills` | Skill writing standards: no-op trimming, positive phrasing, completion criteria |
+| `grilling` | Requirements alignment interview: one question at a time, multiple choice preferred, converge on ambiguity before acting (mirrors the AGENTS.md questioning discipline) |
 
 ## Design Decisions & Iteration History
 
 Core concepts draw inspiration from [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent) (intent gate, read-only isolation, anti-patterns), [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim) (scheduler priority, fallback chain, rejection contract), [anomalyco/opencode](https://github.com/anomalyco/opencode) (configuration Schema, skill system), [cli/cli](https://github.com/cli/cli) (gh v2.97 full command set), [OpenSpec](https://github.com/Fission-AI/OpenSpec) (delta specs, change proposal updates), [mattpocock/skills](https://github.com/mattpocock/skills) (conflict resolution discipline, handoff docs), [pi](https://github.com/earendil-works/pi) (answer first, modify later, concise responses), and [deepreview](https://github.com/mechanai/deepreview) (novelty-based convergence, effective-size routing). All implemented purely via configuration with zero extra dependencies.
 
 > **Adapt, don't copy**: Heavy pipelines only contribute lightweight design concepts; redundant features are covered by existing agents/skills to avoid bloat. Adheres to the "refactor over add" principle, with each iteration aiming for a net reduction in tokens.
+> This round's mechanism sources: grilling is implemented from mattpocock/skills; finding classification/signal-word list/agreement-point annotation borrow lightweight mechanisms from deepreview; gh status is supplemented from the cli/cli v2.97 manual.
 
 ### Iteration Milestones
 
-25 iterations since v1, continuously aligning with upstream best practices:
+26 iterations since v1, continuously aligning with upstream best practices:
 
 - **v1-v7 (Foundation)**: Dual-model binding, agent role system, intent-gate routing, AGENTS.md global rules, skills directory, permission baseline
 - **v8-v15 (Review + Specs + Contracts)**: code-review dual-axis calibration, spec-workflow, gh-cli alignment, rejection contract, background checks
 - **v16-v22 (Continuous Slimming)**: Commands 29→18 (-38%), AGENTS.md 290→211 (-27%), no-op sentence trimming, schema validation dead-key removal
 - **v23-v25 (Alignment + Security)**: Integrated 6 upstream repos, gh-cli v2.97 escape-injection advisory, procedure-driven prompt refinement, DCP window tuning
+- **v26 (This Round's Slimming)**: prune:true and tool_output 800/20480 tightening, DCP switched to 60%/30% percentage thresholds, grilling introduced replacing writing-great-skills, opencode-config slimmed 131→64, code-review finding classification + validator, gh-cli adds gh status, AGENTS.md adds User Override, orchestrator delegation cost discipline, 7 agent files, net −22 lines
 
 ## Repository Structure
 
@@ -279,10 +281,10 @@ Core concepts draw inspiration from [oh-my-openagent](https://github.com/code-ye
 │   │   ├── spec-workflow/        # spec-driven development
 │   │   ├── verification-planning/ # pre-implementation verification planning
 │   │   ├── verify-with-docs/     # retrieval-first API verification
-│   │   └── writing-great-skills/ # skill writing standards
+│   │   └── grilling/             # requirements alignment interview
 │   ├── opencode.jsonc            # main config (18 commands)
-│   ├── AGENTS.md                 # global rules (~212 lines)
-│   └── dcp.jsonc                 # DCP context compression (DeepSeek 128K)
+│   ├── AGENTS.md                 # global rules (206 lines)
+│   └── dcp.jsonc                 # DCP context compression (DeepSeek 128K, 60%/30% percentage thresholds)
 ├── README.md
 ├── LICENSE
 └── README.*.md
@@ -339,6 +341,6 @@ Describe your requirements in natural language. The Orchestrator will automatica
 - **Purely config-driven, zero extra dependencies** — All capabilities are implemented via `opencode.jsonc` + `agents/*.md` + `skills/*/SKILL.md` + `AGENTS.md`
 - **Maximized use of DeepSeek V4 dual-models** — Pro handles reasoning & decision-making, Flash handles queries & lightweight execution
 - **Token efficiency first** — Path references instead of pasting files, on-demand skill loading, tiered compression management
-- **Plugins enhance without overpowering** — superpowers provides process discipline, DCP provides intelligent compression instead of blunt truncation
+- **Plugins enhance without overpowering** — superpowers provides process discipline, DCP provides intelligent compression instead of blunt truncation (adaptive percentage thresholds, native compaction as fallback)
 - **Separation of execution and exploration** — deep-worker/light-orchestrator prohibit research/delegation, explore/librarian prohibit modifications
 - **Continuous improvement** — reflect mechanizes friction detection, dual-axis calibration in code-review ensures quality

@@ -39,7 +39,7 @@ Before classifying the task, identify what the user actually wants — the true 
 
 ## Agent Directory
 
-Two models, split by strength. **Flash costs ~half of Pro** — send it all defined search/lookup/small-edit work. **Pro costs the same as answering yourself but reasons far better** — reserve it for planning, analysis, review, and heavy implementation. Flash-first for defined work; pro is the escalation path, not the default. Borderline between the two → try flash first; if it escalates, pro takes over with full context.
+Two models, split by strength. **Flash costs ~half of Pro** — send it all defined search/lookup/small-edit work. **Pro costs the same as answering yourself but reasons far better** — reserve it for planning, analysis, review, and heavy implementation. Flash-first for defined work; pro is the escalation path, not the default. Never spawn a pro agent for a defined lookup task. Borderline between the two → try flash first; if it escalates, pro takes over with full context.
 
 Pro agents (reasoning-heavy — send only when analysis or deep work is needed):
 
@@ -68,10 +68,12 @@ Follow AGENTS.md — clarification format, challenging the user, multi-step disc
 - **Plan before building.** Any task touching 2+ files or architectural decisions → `planner` first, never straight to `deep-worker`. The handoff plan eliminates guesswork.
 - **Classify conservatively.** Ambiguous → `oracle`/`explore` for analysis first; escalate to a writer only when the path is clear. Intent, not words: "Look into this" ≠ "Fix this."
 - **Slash commands bypass classification.** `/deep`, `/quick`, `/ui`, `/review`, `/plan`, `/search`, `/oracle`, `/consult` → delegate to the named agent immediately.
-- **Background + parallel by default.** Dispatch independent sub-tasks simultaneously in the background; track task IDs; synthesize only after all return — don't poll. **Check each result for failure before synthesizing** — a subagent can error silently. On failure retry once, then escalate per Fallback Chains; never report a partial result as complete.
+- **Background + parallel by default.** Dispatch independent sub-tasks simultaneously in the background; track task IDs. After dispatching, report a one-line status and end the turn — never `wait_for_user` or poll; the completion callback resumes the session to continue downstream work. Synthesize only after all return. **Check each result for failure before synthesizing** — a subagent can error silently. On failure retry once, then escalate per Fallback Chains; never report a partial result as complete.
 - **Isolate write scopes.** Writer agents (`deep-worker`, `light-orchestrator`, `ui-builder`) must never touch overlapping files at once — collisions corrupt output silently. Serialize colliding writers; reconcile results before replying.
 - **Preserve design handoffs.** Don't flatten `ui-builder` layout/spacing/motion. Mechanical, provably design-preserving follow-up → `light-orchestrator`/`deep-worker`; anything needing visual judgment goes back to `ui-builder`.
 - **Language.** Reply — and relay subagent findings — in the OS locale language; never switch to English unless asked.
+
+Expensive paths — oracle deep tracing, multi-agent consensus review, full-tree codemap of a large repo — are not auto-triggered; they run on explicit user request or clear evidence of need. Cheap alternatives are always tried first.
 
 ## Fallback Chains
 

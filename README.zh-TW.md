@@ -12,7 +12,7 @@
 - 模型隔離：`enabled_providers: ["deepseek"]` + `disabled_providers` 雙重鎖
 - 對話分享：關閉（`share: "disabled"`）；快照：開啟（`snapshot: true`）
 - 權限基線：預設放行，破壞性 bash 命令設為 `ask`；`.env` 類敏感檔案 `deny`；外部目錄 `ask`
-- 上下文壓縮：DCP 主動壓縮（35K-75K 閾值）+ OpenCode 原生 compaction 兜底
+- 上下文壓縮：DCP 主動壓縮（60%/30% 百分比閾值，隨模型視窗自適應）+ OpenCode 原生 compaction 兜底（prune 裁舊工具輸出）
 - 全域規則：`AGENTS.md`（核心原則、任務拒絕契約、上下文與 Token 效率、自我驗證、反模式等）
 - 技能：`skills/` 目錄下 **17 個** `SKILL.md` 技能，透過原生 `skill` 工具按需載入
 - 外掛：`superpowers`（14 個過程型技能）、`@tarquinen/opencode-dcp`（智慧上下文裁剪）
@@ -212,9 +212,9 @@ OpenCode 透過原生 `skill` 工具按需暴露技能——Agent 只在需要�
 
 | Skill | 作用 |
 | --- | --- |
-| `code-review` | 雙軸並行審查（規範 + 規約）+ 嚴重度校準 |
+| `code-review` | 雙軸並行審查（規範 + 規約）+ 嚴重度校準 + confirmed/plausible 發現分級（trivial 歸 doc drift）與 Validator pass 輸出前驗證 |
 | `codemap` | 生成帶標註的儲存庫結構圖，節省探索 token |
-| `gh-cli` | GitHub CLI v2.97+ 全面參考（Issues 2.0、copilot、agent-task、gh skill）+ 安全警告（轉義注入） |
+| `gh-cli` | GitHub CLI v2.97+ 全面參考（Issues 2.0、copilot、agent-task、gh skill、gh status 待辦盤點）+ 安全警告（轉義注入） |
 | `git-master` | 進階 Git 操作：rebase、squash、bisect、reflog、worktree |
 | `git-release` | Tag 發布：SemVer 推斷、發布說明、gh release 命令 |
 | `resolving-merge-conflicts` | 逐 hunk 解析合併衝突：追溯原始意圖、不發明新行為、永不 --abort |
@@ -228,22 +228,24 @@ OpenCode 透過原生 `skill` 工具按需暴露技能——Agent 只在需要�
 | `spec-workflow` | 輕量規約驅動變更（propose → design → tasks → implement → archive） |
 | `verification-planning` | 實作前規劃最窄驗證路徑 |
 | `verify-with-docs` | 編碼前核對 API 文件，檢索優先，防止幻覺 |
-| `writing-great-skills` | 技能編寫規範：無操作裁剪、正向表述、完成標準 |
+| `grilling` | 需求對齊訪談：一次一問、多選優先，歧義收斂後再動手（與 AGENTS.md 提問紀律對應） |
 
 ## 設計決策與迭代記錄
 
 核心思路借鑑了 [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent)（意圖門控、唯讀隔離、反模式）、[oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim)（排程器優先、後備鏈、拒絕契約）、[anomalyco/opencode](https://github.com/anomalyco/opencode)（配置 Schema、技能體系）、[cli/cli](https://github.com/cli/cli)（gh v2.97 完整命令集）、[OpenSpec](https://github.com/Fission-AI/OpenSpec)（delta specs、變更提案更新）、[mattpocock/skills](https://github.com/mattpocock/skills)（衝突解析紀律、交接文件）、[pi](https://github.com/earendil-works/pi)（先答後改、精簡回應）和 [deepreview](https://github.com/mechanai/deepreview)（novelty 分類收斂、有效大小路由）的優點，純配置實作，零額外依賴。
 
 > **借鑑而非照搬**：過重的流水線只汲取輕量化設計理念；冗餘功能由現有 agents/skills 覆蓋，不新增。遵循「精簡優先於新增」原則，每次迭代都以淨減 token 為目標。
+> 本輪機制來源：grilling 落地自 mattpocock/skills；發現分級/訊號詞表/一致點標註借鑑 deepreview 的輕量機制；gh status 增補自 cli/cli v2.97 手冊。
 
 ### 迭代里程碑
 
-自 v1 以來歷經 25 次迭代，持續對標上游儲存庫最佳實踐：
+自 v1 以來歷經 26 次迭代，持續對標上游儲存庫最佳實踐：
 
 - **v1-v7（奠基）**：雙模型繫結、Agent 角色體系、意圖門控路由、AGENTS.md 全域規則、Skills 目錄、權限基線
 - **v8-v15（審查+規約+契約）**：code-review 雙軸校準、spec-workflow、gh-cli 對齊、拒絕契約、後臺核查
 - **v16-v22（持續瘦身）**：命令 29→18（-38%）、AGENTS.md 290→211（-27%）、逐句 no-op 修剪、Schema 校驗去死鍵
 - **v23-v25（對齊+安全）**：整合 6 個上游儲存庫、gh-cli v2.97 轉義注入安全章節、procedure-driven 提示精化、DCP 視窗調優
+- **v26（本輪瘦身）**：prune:true 與 tool_output 800/20480 收緊、DCP 切換 60%/30% 百分比閾值、grilling 引入替代 writing-great-skills、opencode-config 131→64 精簡、code-review 分級+validator、gh-cli 補 gh status、AGENTS.md 增 User Override、orchestrator 委託成本紀律、7 個 agent 檔案淨減 22 行
 
 ## 儲存庫結構
 
@@ -279,10 +281,10 @@ OpenCode 透過原生 `skill` 工具按需暴露技能——Agent 只在需要�
 │   │   ├── spec-workflow/        # 規約驅動開發
 │   │   ├── verification-planning/ # 實作前驗證路徑規劃
 │   │   ├── verify-with-docs/     # 檢索優先 API 驗證
-│   │   └── writing-great-skills/ # 技能編寫規範
+│   │   └── grilling/             # 需求對齊訪談
 │   ├── opencode.jsonc            # 主配置（18 條命令）
-│   ├── AGENTS.md                 # 全域規則（~212 行）
-│   └── dcp.jsonc                 # DCP 上下文壓縮（DeepSeek 128K）
+│   ├── AGENTS.md                 # 全域規則（206 行）
+│   └── dcp.jsonc                 # DCP 上下文壓縮（DeepSeek 128K，60%/30% 百分比閾值）
 ├── README.md
 ├── LICENSE
 └── README.*.md
@@ -339,6 +341,6 @@ OpenCode 透過原生 `skill` 工具按需暴露技能——Agent 只在需要�
 - **純配置驅動，零額外依賴** —— 所有能力由 `opencode.jsonc` + `agents/*.md` + `skills/*/SKILL.md` + `AGENTS.md` 實作
 - **DeepSeek V4 雙模型極致利用** —— Pro 做推理與決策，Flash 做查詢與輕量執行
 - **Token 效率優先** —— 路徑引用替代貼上檔案、技能按需載入、壓縮分級管理
-- **外掛增效但不喧賓奪主** —— superpowers 提供過程紀律，DCP 智慧壓縮替代簡單截斷
+- **外掛增效但不喧賓奪主** —— superpowers 提供過程紀律，DCP 智慧壓縮替代簡單截斷（百分比閾值自適應，原生 compaction 兜底）
 - **執行與探索分離** —— deep-worker/light-orchestrator 禁止研究/委託，explore/librarian 禁止修改
 - **持續改進** —— reflect 機制化發現摩擦、code-review 雙軸校準保證品質

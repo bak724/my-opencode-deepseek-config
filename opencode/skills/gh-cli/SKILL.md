@@ -373,6 +373,9 @@ gh extension upgrade owner/repo                           # upgrade one
 gh extension upgrade --all                                # upgrade all
 gh extension remove owner/repo                            # uninstall (alias for `uninstall`, v2.94.0+)
 gh extension exec <name> [args]                           # run by name
+gh extension search <query>                               # search public extensions (top 30 by stars default)
+gh extension browse                                       # interactive TUI to browse/add/remove extensions
+gh extension create [<name>]                              # scaffold a new extension (--precompiled go|other)
 ```
 
 Note: `gh extension install` no longer requires authentication (v2.90.0+). The
@@ -511,18 +514,19 @@ v2.96.0+) to fetch artifacts.
 - `gh run cancel <id> --force` — immediately cancel without waiting for in-progress steps (v2.78.0+).
 - `gh run rerun <id> --failed` — rerun only failed jobs.
 - `gh attestation verify|download file.bin -R owner/repo` — Sigstore supply-chain.
+- `gh attestation trusted-root` — export a `trusted_root.jsonl` for offline verification (pass via `--custom-trusted-root`; `--tuf-url`/`--tuf-root` for a custom TUF mirror).
 - `gh release download <tag>` — no auth needed on public repos (v2.96+).
 - Telemetry: set `GH_TELEMETRY=false` or `DO_NOT_TRACK=true` env vars to disable (v2.91.0+).
 - `gh skill` — see the Agent Skills section above and the `gh-skill` skill for the full workflow.
 - `--json` with NO value: `gh pr list --json` prints all available JSON field names — use this to discover fields before querying. Works on all list/view commands.
+- `gh issue develop <n>` — manage linked branches for an issue (`--list`, `--checkout`, `--name`, `--base`).
+- `gh org list` — list organizations for the authenticated user (`-L` to limit).
+- `gh label clone` — clone labels from a source repo to the current repo (`--force` overwrites existing).
+- `gh preview prompter` — experimental; unstable, may change at any time — do not depend on it.
 
 ## New in v2.97.0
 
 - `gh project` by-name field editing (see above)
-- `gh issue develop <n>` — manage linked branches (`--list`, `--checkout`, `--name`, `--base`)
-- `gh org list` — list organizations for authenticated user
-- `gh label clone` — clone labels from one repo to another
-- `gh extension browse` / `gh extension create` / `gh extension search` — new extension subcommands
 - Security: `gh api`, `gh gist view`, `gh pr diff`, `gh repo read-file` now strip ANSI escapes by default; use `--allow-escape-sequences` to preserve them
 
 ## Quick reference
@@ -578,16 +582,16 @@ gh agent-task create "Fix login"
 gh agent-task list --json id,name,state
 
 # Skills & file reading
-# New in v2.97.0
-gh project item-edit <id> --field "Status" --value "Done"
-gh issue develop <n> --list
-gh org list
-gh label clone --source-repo owner/repo
+gh project item-edit <id> --field "Status" --value "Done"   # new in v2.97.0
 gh skill search <query>
 gh skill install owner/repo --agent opencode
 gh skill update <skill-id>
 gh repo read-file README.md --repo cli/cli
 gh repo read-dir script --repo cli/cli
+
+# Status
+gh status                                # assigned issues/PRs, review requests, mentions, repo activity
+gh status --org <org>                    # scope to one org; --exclude owner/repo to skip repos
 
 # Auth & config
 gh config set git_protocol ssh

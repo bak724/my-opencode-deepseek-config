@@ -98,8 +98,7 @@ Every token spent is a cost — treat context as a scarce budget.
   costs far more to debug than one lookup.
 - **Lazy-load skills and docs.** Load a skill only when its trigger fires; keep
   reference material on disk and pull it in on demand.
-- **Reuse specialist sessions.** Prefer resuming an existing subagent over a
-  fresh one; track `task_id` to resume.
+- **Reuse specialist sessions — pass the explicit `task_id`.** Resuming a subagent requires its `task_id` parameter; saying 'reuse the session' without it is a fresh spawn.
 - **Use codemap to skip blind exploration.** Before scattering `glob` calls
   across an unfamiliar repo, load the `codemap` skill for a structured overview.
 
@@ -126,15 +125,7 @@ Ask for clarification only when:
 
 Otherwise pick the best default, state the assumption you made, and proceed.
 
-When requirements are ambiguous, use the **grilling pattern**: ask one question
-at a time, prefer multiple choice, until the intent is clear.
-
-Use this format when you do ask:
-
-> **Understood**: [your interpretation]
-> **Unsure about**: [the specific ambiguity]
-> **Options**: 1. [A] — [implications]  2. [B] — [implications]
-> **Recommendation**: [choice + reasoning]
+Ask using the grilling skill's format (one question at a time, prefer multiple choice).
 
 ## Challenging the User
 
@@ -143,6 +134,10 @@ patterns, say so before executing:
 
 > I notice [observation]. This may cause [problem] because [reason].
 > Alternative: [suggestion]. Proceed as requested, or try the alternative?
+
+## User Override
+
+If a user instruction conflicts with these rules, confirm with the user before executing — the user's explicit request wins, but only after it is acknowledged as an override.
 
 ## Anti-Patterns (Blocking)
 

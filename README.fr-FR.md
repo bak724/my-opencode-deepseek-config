@@ -12,7 +12,7 @@
 - Isolation des modèles : double verrouillage `enabled_providers: ["deepseek"]` + `disabled_providers`
 - Partage de session : désactivé (`share: "disabled"`) ; Instantanés : activés (`snapshot: true`)
 - Base de permissions : autorisation par défaut, commandes bash destructrices réglées sur `ask` ; fichiers sensibles de type `.env` réglés sur `deny` ; répertoires externes réglés sur `ask`
-- Compression de contexte : compression proactive DCP (seuils 35K-75K) + compaction native OpenCode en filet de sécurité
+- Compression de contexte : compression proactive DCP (seuils en pourcentage 60%/30%, adaptés à la fenêtre du modèle) + compaction native OpenCode en filet de sécurité (prune écarte les anciennes sorties d'outils)
 - Règles globales : `AGENTS.md` (principes fondamentaux, contrat de refus de tâche, contexte et efficacité des tokens, auto-vérification, anti-patterns, etc.)
 - Compétences : **17** `SKILL.md` dans le répertoire `skills/`, chargées à la demande via l'outil `skill` natif
 - Plugins : `superpowers` (14 compétences orientées processus), `@tarquinen/opencode-dcp` (élagage intelligent du contexte)
@@ -212,9 +212,9 @@ OpenCode expose les compétences à la demande via l'outil `skill` natif — les
 
 | Compétence | Rôle |
 | --- | --- |
-| `code-review` | Revue parallèle sur deux axes (conventions + spécifications) + calibration de sévérité |
+| `code-review` | Revue parallèle sur deux axes (conventions + spécifications) + calibration de sévérité + classification des constatations confirmed/plausible (trivial renvoyé au doc drift) et validation de sortie par le pass Validator |
 | `codemap` | Générer une carte annotée de la structure du dépôt, économisant des tokens d'exploration |
-| `gh-cli` | Référence complète GitHub CLI v2.97+ (Issues 2.0, copilot, agent-task, gh skill) + avertissement de sécurité (injection d'échappement) |
+| `gh-cli` | Référence complète GitHub CLI v2.97+ (Issues 2.0, copilot, agent-task, gh skill) + avertissement de sécurité (injection d'échappement) + inventaire des tâches via gh status |
 | `git-master` | Opérations Git avancées : rebase, squash, bisect, reflog, worktree |
 | `git-release` | Release avec tag : inférence SemVer, notes de release, commande gh release |
 | `resolving-merge-conflicts` | Résoudre les conflits de merge par hunk : tracer l'intention originale, ne jamais inventer de comportement, jamais --abort |
@@ -228,22 +228,24 @@ OpenCode expose les compétences à la demande via l'outil `skill` natif — les
 | `spec-workflow` | Changement piloté par spécification léger (propose → design → tasks → implement → archive) |
 | `verification-planning` | Planifier le chemin de vérification le plus étroit avant l'implémentation |
 | `verify-with-docs` | Vérifier la documentation API avant de coder, recherche prioritaire, prévention des hallucinations |
-| `writing-great-skills` | Normes de rédaction de compétences : élagage des no-ops, formulation positive, critères d'achèvement |
+| `grilling` | Interview d'alignement des besoins : une question à la fois, choix multiples privilégiés, agir seulement après convergence des ambiguïtés (en phase avec la discipline de questionnement d'AGENTS.md) |
 
 ## Décisions de conception et historique des itérations
 
 L'approche fondamentale s'inspire des meilleures pratiques de [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent) (filtrage d'intention, isolation lecture seule, anti-patterns), [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim) (priorité au planificateur, chaîne de repli, contrat de refus), [anomalyco/opencode](https://github.com/anomalyco/opencode) (schéma de configuration, système de compétences), [cli/cli](https://github.com/cli/cli) (ensemble complet de commandes gh), [OpenSpec](https://github.com/Fission-AI/OpenSpec) (spécifications delta, mise à jour des propositions de changement), [mattpocock/skills](https://github.com/mattpocock/skills) (document de passation, débogage structuré, résolution de conflits de merge), [pi](https://github.com/earendil-works/pi) (répondre d'abord puis modifier, réponses concises) et [deepreview](https://github.com/mechanai/deepreview) (convergence basée sur la nouveauté, scan mécanique). Implémentation purement via configuration, zéro dépendance supplémentaire.
 
 > **S'inspirer, pas copier** : des pipelines trop lourds, seuls les concepts de conception légers sont extraits ; les fonctionnalités redondantes sont couvertes par les agents/compétences existants, sans en ajouter de nouvelles. Suivant le principe « simplifier plutôt qu'ajouter », chaque itération vise une réduction nette des tokens.
+> Origines des mécanismes de cette itération : grilling implémenté à partir de mattpocock/skills ; classification des constatations / table de mots-signaux / annotation des points de consensus empruntés aux mécanismes légers de deepreview ; gh status complété d'après le manuel cli/cli v2.97.
 
 ### Jalons d'itération
 
-25 itérations depuis la v1, continuellement alignées sur les meilleures pratiques :
+26 itérations depuis la v1, continuellement alignées sur les meilleures pratiques :
 
 - **v1-v7 (Fondation)** : Liaison double modèle, système de rôles d'agents, routage par intention, règles globales AGENTS.md, répertoire skills, base de permissions
 - **v8-v15 (Revue + Specs + Contrats)** : code-review calibration double axe, spec-workflow, alignement gh-cli, contrat de rejet, vérifications en arrière-plan
 - **v16-v22 (Amincissement continu)** : Commandes 29→18 (-38%), AGENTS.md 290→211 (-27%), élagage no-op, validation de schéma
 - **v23-v25 (Alignement + Sécurité)** : 6 dépôts upstream intégrés, gh-cli v2.97 avertissement d'injection, raffinement des prompts procedure-driven, tuning DCP
+- **v26 (amincissement de ce cycle)** : prune:true et resserrement de tool_output 800/20480, DCP bascule sur des seuils en pourcentage 60%/30%, introduction de grilling en remplacement de writing-great-skills, opencode-config réduit de 131 à 64 lignes, code-review classification des constatations + validator, gh-cli complété par gh status, ajout de User Override dans AGENTS.md, discipline de coût de délégation de l'orchestrator, 7 fichiers d'agents allégés de 22 lignes nettes
 
 ## Structure du dépôt
 
@@ -279,10 +281,10 @@ L'approche fondamentale s'inspire des meilleures pratiques de [oh-my-openagent](
 │   │   ├── spec-workflow/            # Développement piloté par spécification
 │   │   ├── verification-planning/    # Planification du chemin de vérification avant implémentation
 │   │   ├── verify-with-docs/         # Vérification API avec recherche prioritaire
-│   │   └── writing-great-skills/     # Normes de rédaction de compétences
+│   │   └── grilling/             # Interview d'alignement des besoins
 │   ├── opencode.jsonc                # Configuration principale (18 commandes)
-│   ├── AGENTS.md                     # Règles globales (~212 lignes)
-│   └── dcp.jsonc                     # Compression de contexte DCP (DeepSeek 128K)
+│   ├── AGENTS.md                     # Règles globales (206 lignes)
+│   └── dcp.jsonc                     # Compression de contexte DCP (DeepSeek 128K, seuils en pourcentage 60%/30%)
 ├── README.md
 ├── LICENSE
 └── README.*.md
@@ -339,6 +341,6 @@ Décrivez vos besoins en langage naturel, l'Orchestrator analyse automatiquement
 - **Piloté par la configuration pure, zéro dépendance supplémentaire** — toutes les capacités sont implémentées par `opencode.jsonc` + `agents/*.md` + `skills/*/SKILL.md` + `AGENTS.md`
 - **Exploitation optimale des deux modèles DeepSeek V4** — Pro pour le raisonnement et la décision, Flash pour la recherche et l'exécution légère
 - **Priorité à l'efficacité des tokens** — référence par chemin plutôt que collage de fichiers, compétences chargées à la demande, compression à plusieurs niveaux
-- **Plugins pour amplifier l'efficacité sans prendre le dessus** — superpowers fournit la discipline de processus, DCP remplace la simple troncature par une compression intelligente
+- **Plugins pour amplifier l'efficacité sans prendre le dessus** — superpowers fournit la discipline de processus, DCP remplace la simple troncature par une compression intelligente (seuils en pourcentage auto-adaptatifs, compaction native en filet de sécurité)
 - **Séparation de l'exécution et de l'exploration** — deep-worker/light-orchestrator interdits de recherche/délégation, explore/librarian interdits de modification
 - **Amélioration continue** — reflect mécanise la détection de frictions, code-review avec calibration sur deux axes garantit la qualité

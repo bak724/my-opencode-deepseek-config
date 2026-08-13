@@ -12,7 +12,7 @@
 - 모델 격리: `enabled_providers: ["deepseek"]` + `disabled_providers` 이중 잠금
 - 세션 공유: 비활성화(`share: "disabled"`); 스냅샷: 활성화(`snapshot: true`)
 - 권한 기준: 기본 허용, 파괴적 bash 명령은 `ask`로 설정; `.env`류 민감 파일은 `deny`; 외부 디렉터리는 `ask`
-- 컨텍스트 압축: DCP 능동 압축(35K-75K 임계값) + OpenCode 네이티브 compaction 백업
+- 컨텍스트 압축: DCP 능동 압축(60%/30% 백분율 임계값, 모델 창 크기에 맞춰 적응) + OpenCode 네이티브 compaction 백업(prune으로 오래된 도구 출력 제거)
 - 전역 규칙: `AGENTS.md`(핵심 원칙, 작업 거부 계약, 컨텍스트와 토큰 효율성, 자체 검증, 안티 패턴 등)
 - 스킬: `skills/` 디렉터리 아래 **17개** `SKILL.md` 스킬, 네이티브 `skill` 도구를 통해 필요 시 로드
 - 플러그인: `superpowers`(14개 프로세스형 스킬), `@tarquinen/opencode-dcp`(지능형 컨텍스트 가지치기)
@@ -212,9 +212,9 @@ OpenCode는 네이티브 `skill` 도구를 통해 필요 시 스킬을 노출합
 
 | 스킬 | 역할 |
 | --- | --- |
-| `code-review` | 이중 축 병렬 리뷰(규범 + 스펙) + 심각도 보정 |
+| `code-review` | 이중 축 병렬 리뷰(규범 + 스펙) + 심각도 보정 + confirmed/plausible 발견 분류(trivial은 doc drift로 라우팅)와 Validator pass 출력 전 검증 |
 | `codemap` | 주석이 포함된 저장소 구조도 생성, 탐색 토큰 절약 |
-| `gh-cli` | GitHub CLI v2.97+ 전체 참조(Issues 2.0, copilot, agent-task, gh skill) + 보안 경고 (이스케이프 인젝션) |
+| `gh-cli` | GitHub CLI v2.97+ 전체 참조(Issues 2.0, copilot, agent-task, gh skill) + 보안 경고 (이스케이프 인젝션) + gh status 할 일 정리 |
 | `git-master` | 고급 Git 작업: rebase, squash, bisect, reflog, worktree |
 | `git-release` | 태그 릴리스: SemVer 추론, 릴리스 노트, gh release 명령 |
 | `resolving-merge-conflicts` | hunk별 병합 충돌 해결: 원래 의도 추적, 새로운 동작 발명 금지, 절대 --abort 사용 안 함 |
@@ -228,22 +228,24 @@ OpenCode는 네이티브 `skill` 도구를 통해 필요 시 스킬을 노출합
 | `spec-workflow` | 경량 스펙 주도 변경(propose → design → tasks → implement → archive) |
 | `verification-planning` | 구현 전 최소 검증 경로 계획 |
 | `verify-with-docs` | 코딩 전 API 문서 확인, 검색 우선, 환각 방지 |
-| `writing-great-skills` | 스킬 작성 규범: 무작업 가지치기, 긍정적 표현, 완료 기준 |
+| `grilling` | 요구사항 정렬 인터뷰: 한 번에 한 가지 질문, 객관식 우선, 모호성이 수렴된 후 착수(AGENTS.md 질문 규율에 대응) |
 
 ## 설계 결정과 반복 기록
 
 핵심 아이디어는 [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent)(의도 게이트, 읽기 전용 격리, 안티 패턴), [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim)(스케줄러 우선, 폴백 체인, 거부 계약), [anomalyco/opencode](https://github.com/anomalyco/opencode)(구성 스키마, 스킬 체계), [cli/cli](https://github.com/cli/cli)(gh v2.97), [OpenSpec](https://github.com/Fission-AI/OpenSpec)(델타 스펙, 변경 제안서 업데이트), [mattpocock/skills](https://github.com/mattpocock/skills)(인수인계 문서, 구조화된 디버깅), [pi](https://github.com/earendil-works/pi)(먼저 답변 후 수정, 간결한 응답), [deepreview](https://github.com/mechanai/deepreview)(novelty-based convergence), conflict resolution discipline의 장점을 참고하였으며, 순수 구성으로 구현, 추가 의존성 없음.
 
 > **참고하되 그대로 베끼지 않음**: 지나치게 무거운 파이프라인은 경량 설계 이념만 추출합니다. 중복 기능은 기존 agents/skills가 커버하며, 새로 추가하지 않습니다. "추가보다 간소화 우선" 원칙을 따르며, 매 반복마다 토큰 순감소를 목표로 합니다.
+> 이번 라운드 메커니즘 출처: grilling은 mattpocock/skills에서 구현; 발견 분류/신호어 표/합치점 주석은 deepreview의 경량 메커니즘에서 차용; gh status는 cli/cli v2.97 매뉴얼에서 보강.
 
 ### 반복 마일스톤
 
-v1 이후 25회 반복, 지속적으로 업스트림 모범 사례에 정렬:
+v1 이후 26회 반복, 지속적으로 업스트림 모범 사례에 정렬:
 
 - **v1-v7 (기반)**: 듀얼 모델 바인딩, 에이전트 역할 시스템, 의도 게이트 라우팅, AGENTS.md 글로벌 규칙, Skills 디렉토리, 권한 기준
 - **v8-v15 (리뷰 + 사양 + 계약)**: code-review 듀얼 축 보정, spec-workflow, gh-cli 정렬, 거부 계약, 백그라운드 확인
 - **v16-v22 (지속적 슬림화)**: 명령 29→18 (-38%), AGENTS.md 290→211 (-27%), no-op 트리밍, 스키마 검증
 - **v23-v25 (정렬 + 보안)**: 6개 업스트림 저장소 통합, gh-cli v2.97 이스케이프 인젝션 경고, procedure-driven 프롬프트 개선, DCP 창 튜닝
+- **v26 (이번 라운드 슬림화)**: prune:true와 tool_output 800/20480 강화, DCP 60%/30% 백분율 임계값 전환, grilling 도입으로 writing-great-skills 대체, opencode-config 131→64 간소화, code-review 발견 분류+validator, gh-cli gh status 보강, AGENTS.md User Override 추가, orchestrator 위임 비용 규율, 에이전트 파일 7개에서 순 22줄 감소
 
 ## 저장소 구조
 
@@ -279,10 +281,10 @@ v1 이후 25회 반복, 지속적으로 업스트림 모범 사례에 정렬:
 │   │   ├── spec-workflow/        # 스펙 주도 개발
 │   │   ├── verification-planning/ # 구현 전 검증 경로 계획
 │   │   ├── verify-with-docs/     # 검색 우선 API 검증
-│   │   └── writing-great-skills/ # 스킬 작성 규범
+│   │   └── grilling/             # 요구사항 정렬 인터뷰
 │   ├── opencode.jsonc            # 주 구성(18개 명령)
-│   ├── AGENTS.md                 # 전역 규칙(~212줄)
-│   └── dcp.jsonc                 # DCP 컨텍스트 압축(DeepSeek 128K)
+│   ├── AGENTS.md                 # 전역 규칙(206줄)
+│   └── dcp.jsonc                 # DCP 컨텍스트 압축(DeepSeek 128K, 60%/30% 백분율 임계값)
 ├── README.md
 ├── LICENSE
 └── README.*.md                   # 기타 언어 README
@@ -339,6 +341,6 @@ v1 이후 25회 반복, 지속적으로 업스트림 모범 사례에 정렬:
 - **순수 구성 주도, 추가 의존성 없음** —— 모든 기능은 `opencode.jsonc` + `agents/*.md` + `skills/*/SKILL.md` + `AGENTS.md`로 구현
 - **DeepSeek V4 듀얼 모델 극한 활용** —— Pro는 추론과 의사 결정을, Flash는 조회와 경량 실행을 담당
 - **토큰 효율성 우선** —— 파일 붙여넣기 대신 경로 참조, 스킬 필요 시 로드, 압축 계층적 관리
-- **플러그인은 효율을 높이되 주객전도 금지** —— superpowers는 프로세스 규율 제공, DCP 지능형 압축으로 단순 절단 대체
+- **플러그인은 효율을 높이되 주객전도 금지** —— superpowers는 프로세스 규율 제공, DCP 지능형 압축으로 단순 절단 대체(백분율 임계값 자동 적응, 네이티브 compaction 백업)
 - **실행과 탐색 분리** —— deep-worker/light-orchestrator는 연구/위임 금지, explore/librarian은 수정 금지
 - **지속적 개선** —— reflect로 마찰 체계적 발견, code-review 이중 축 보정으로 품질 보장

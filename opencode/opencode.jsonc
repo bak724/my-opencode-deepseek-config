@@ -72,15 +72,18 @@
         "compaction": { "model": "deepseek/deepseek-v4-flash" }
     },
     // Trim only oversized tool outputs (full text still saved to disk, preview
-    // returned). Below OpenCode defaults (2000/51200) to actively save context;
-    // normal reads are far smaller and unaffected.
+    // returned). 800 lines / 20KB balances token savings against re-reads:
+    // 200/8192 is too tight and truncates normal file reads, forcing agents to
+    // re-read and cost more tokens; 1500 is too loose.
     "tool_output": {
-        "max_lines": 1500,
-        "max_bytes": 40960
+        "max_lines": 800,
+        "max_bytes": 20480
     },
+    // prune:true lets native compaction drop stale tool outputs; DCP only does
+    // range compression + dedup, so the two complement rather than overlap.
     "compaction": {
         "auto": true,
-        "prune": false,
+        "prune": true,
         "tail_turns": 8,
         "preserve_recent_tokens": 12000,
         "reserved": 10240
