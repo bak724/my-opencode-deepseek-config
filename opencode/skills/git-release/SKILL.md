@@ -1,6 +1,6 @@
 ---
 name: git-release
-description: Prepare a tagged release with consistent release notes, a SemVer version bump, and a copy-pasteable gh release command. Use when cutting a release, drafting a changelog, tagging a version, or the task mentions "release", "changelog", "version bump", "tag", or "publish a new version".
+description: Prepare a tagged release with release notes, a SemVer version bump, and a gh release command. Use when cutting a release, drafting a changelog, tagging a version, or the task mentions "release", "changelog", "version bump", "tag", or "publish a new version".
 ---
 
 # Git Release

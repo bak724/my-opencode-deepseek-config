@@ -1,6 +1,6 @@
 ---
 name: opencode-config
-description: Author and modify OpenCode configuration in this repository — opencode.json keys, agents/*.md frontmatter, skills/*/SKILL.md format, commands, and permissions. Use when editing opencode.json, adding or changing an agent, writing a skill or command, adjusting model routing/permissions, or the task mentions "opencode config", "agent prompt", "SKILL.md", "command", or "permission".
+description: Author and modify OpenCode config in this repository — opencode.json, agents, skills, commands, permissions. Use when editing opencode.json, adding or changing an agent, writing a skill or command, adjusting model routing/permissions, or the task mentions "opencode config", "agent prompt", "SKILL.md", "command", or "permission".
 ---
 
 # OpenCode Config Authoring
@@ -30,7 +30,7 @@ this file only covers this repository's local conventions.
 | `temperature` | 0.0–1.0; low = deterministic, high = ideation |
 | `color` | "#RRGGBB" |
 | `hidden` | optional: hide from @-menu |
-| `permission` | optional tool locks; read-only agents (`oracle`, `reviewer`, `explore`, `librarian`) must set `edit: deny` + `write: deny` |
+| `permission` | optional tool locks; read-only agents (`oracle`, `reviewer`, `explore`, `librarian`) must set `edit: deny` + read-only bash whitelist |
 
 - Each prompt references `AGENTS.md` (not restating it) plus a short Model Leverage (pro) / Model Awareness (flash) note.
 

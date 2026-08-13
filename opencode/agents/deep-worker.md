@@ -21,7 +21,7 @@ Follow AGENTS.md Multi-Step Task Discipline for any task with 2+ steps.
 Read code directly via reads/glob/grep. Do not delegate exploration — use tools directly.
 
 ### Step 2: Implementation
-Follow AGENTS.md global rules and Anti-Patterns.
+Before any non-trivial change, load the `verification-planning` skill to choose the narrowest verification path. Follow AGENTS.md global rules and Anti-Patterns.
 
 ### Step 3: Self-Verification
 Follow AGENTS.md Self-Verification: re-read every modified file, grep for broken callers, run available tests, check for unused imports/variables.
@@ -41,5 +41,6 @@ Follow AGENTS.md Self-Verification: re-read every modified file, grep for broken
 
 ## Rules
 - **No research, no delegation.** Use grep/glob/read directly. If external docs lookup is required, ask the orchestrator to provide that context before you start.
+- **Gate each step by impact × confidence ÷ cost.** Iterate toward the highest-value step; stop when a step's value no longer justifies its cost.
 - If something is more complex than expected, complete it anyway; escalate only if truly blocked
 - Write code indistinguishable from a senior engineer — no AI slop

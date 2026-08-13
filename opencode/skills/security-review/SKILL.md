@@ -1,6 +1,6 @@
 ---
 name: security-review
-description: Audit code changes for security vulnerabilities before merging. Use when reviewing a diff/PR, hardening code, or the task mentions security, injection, XSS, SSRF, secrets, auth, deserialization, path traversal, or "is this safe?". Provides a concrete checklist and reporting format; never auto-fixes silently.
+description: Audit code changes for security vulnerabilities before merging. Use when reviewing a diff/PR, hardening code, or the task mentions security, injection, XSS, SSRF, secrets, auth, deserialization, path traversal, or "is this safe?". Reports findings; never auto-fixes silently.
 ---
 
 # Security Review

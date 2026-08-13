@@ -1,6 +1,6 @@
 ---
 name: gh-cli
-description: Patterns for invoking the GitHub CLI (gh v2.97.0+) from agents. Use when the task mentions GitHub, gh, pull requests/PRs, issues, releases, gists, Actions/workflow runs, forks, repo cloning, reviews, or you need exact gh commands. Covers structured output, pagination, repo targeting, search vs list, issue types/sub-issues, discussions, projects, rulesets, agent skills, AI commands (copilot, agent-task), repo read-file/read-dir, and gh api fallback.
+description: Patterns for invoking the GitHub CLI (gh v2.97.0+) from agents. Use when the task mentions GitHub, gh, pull requests/PRs, issues, releases, gists, Actions/workflow runs, forks, repo cloning, reviews, or you need exact gh commands. Covers pagination, repo targeting, search vs list, discussions, projects, rulesets, skills, and gh api fallback.
 ---
 
 # GitHub CLI (`gh`) agent patterns
@@ -299,6 +299,14 @@ gh api --cache 30m repos/{owner}/{repo}
 - `GH_ENTERPRISE_TOKEN` for GHES, `GH_HOST` for enterprise instances
 - Never paste tokens on the command line; use `--with-token < file` or env vars
 
+## Rate limits
+
+- `gho_*` OAuth tokens (from `gh auth login`) get 5,000 GraphQL points/hr.
+- `GITHUB_TOKEN` (Actions) is capped at 1,000 requests/hr/repo.
+- Rely on response headers `x-ratelimit-remaining` / `x-ratelimit-reset`, not
+  polling `/rate_limit` — cheaper and always accurate.
+- On `429`/`403`, read `retry-after` and back off; don't retry blindly.
+
 ## Gists (`gh gist`)
 
 ```bash
@@ -361,6 +369,7 @@ gh config set prompt disabled                             # disable interactivit
 gh config get git_protocol
 gh config list
 gh config set browser ""                                   # disable browser opening
+gh config clear-cache                                      # clear `gh api --cache` responses
 ```
 
 ## Extensions (`gh extension`)
@@ -423,6 +432,16 @@ gh skill publish                                          # publish skill from c
 
 `gh skill install --agent opencode` installs skills to `~/.config/opencode/skills/<name>/SKILL.md`. Default scope is `project`, default agent is `github-copilot` — always pass `--agent opencode`. Skills installed via `gh skill` appear in the agent's available skills list automatically — no config change needed.
 
+Supported `--agent` hosts: `github-copilot`, `opencode`, `Devin`, `Grok`,
+`antigravity-cli` (aliased `antigravity2.0`), and more as the ecosystem adds
+them. `--scope user|project` selects the install location (`user` = per-user
+config dir, `project` = repo-local); pass `--scope user` for skills shared
+across projects.
+
+Self-install gh usage as a skill: `gh skill install cli/cli gh` — installs the
+official `gh` skill so the CLI's own usage patterns are discoverable like any
+other skill.
+
 ## AI-integrated commands (`gh copilot`, `gh agent-task`)
 
 ### `gh copilot` — native built-in (v2.86.0+)
@@ -449,7 +468,7 @@ unattended scripts.
 
 Aliases: `gh agent`, `gh agents`. Delegates a coding task to a GitHub coding agent
 (preview). Requires an OAuth token from `gh auth login` (`gho_` prefix) — plain
-PAT/`GH_TOKEN` is rejected.
+PAT/`GH_TOKEN` is rejected (empirical finding, not a documented rule).
 
 ```bash
 gh agent-task create "Fix the login redirect"                       # positional description
@@ -478,6 +497,15 @@ Assign Copilot to issues (v2.73.0+, github.com):
 ```bash
 gh issue edit <n> --add-assignee @copilot
 gh issue create --assignee @copilot            # v2.76.0+
+```
+
+## Agentic CI (`gh aw`) — GitHub's agentic CI framework
+
+Official extension for running coding agents in CI. Install and initialize:
+
+```bash
+gh extension install github/gh-aw
+gh aw add                                     # add the gh-aw workflow to the repo
 ```
 
 ## Release verification (`gh release verify`) — v2.75.0+

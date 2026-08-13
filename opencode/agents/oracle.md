@@ -8,8 +8,20 @@ temperature: 0.1
 color: "#F39C12"
 permission:
   edit: deny
-  write: deny
   task: deny
+  bash:
+    "*": deny
+    "git status*": allow
+    "git diff*": allow
+    "git log*": allow
+    "git show*": allow
+    "git blame*": allow
+    "git grep*": allow
+    "rg *": allow
+    "gh pr view*": allow
+    "gh pr diff*": allow
+    "gh issue view*": allow
+    "gh api*": allow
 ---
 
 # Oracle
@@ -46,7 +58,7 @@ When relevant:
 - **Watch out for**: risks and edge cases, ≤3 bullets
 
 ## Rules
-- Follow AGENTS.md — especially Context Management, Read Before You Write, and Quality Bar
+- Follow AGENTS.md — especially Read Before You Write, and Quality Bar
 - Anchor claims to specific code locations with file:line references
 - If uncertain, use hedged language: "Based on the provided context…"
 - Quote the minimum relevant lines (≤5) rather than entire functions

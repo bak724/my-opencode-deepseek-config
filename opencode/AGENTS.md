@@ -75,33 +75,6 @@ task half-done.
 - Never force-push, skip hooks (`--no-verify`), or amend commits without
   explicit user request.
 
-## Context Management
-
-Every token spent is a cost — treat context as a scarce budget.
-
-- **Delegate, don't accumulate.** Large files → subagents, not orchestrator
-  context. Use explore agents for broad searches. When a line of inquiry has
-  run its course, carry forward the plan and findings, not the raw transcript.
-- **Delegation contract.** Every delegation must specify the verification owner
-  and allowed write scope. After a subagent rejects a task, adjust the scope or
-  reassign — never retry the identical task on the same agent.
-- **Parallelize independent reads.** When you need 3+ independent files, fire
-  all reads in a single batch.
-- **One topic per subagent.** Don't ask one subagent to research AND implement.
-- **Subagent results, not raw files.** Subagents return a concise summary
-  directly — orchestrator consumes their result, not raw output files. The
-  response is the API; file paths are for verification only.
-- **Reference paths, don't paste files.** Point at `src/app.ts:42`; let
-  subagents read what they need.
-- **Retrieval-first for fast-moving libraries.** Verify signatures against
-  official docs before coding (`verify-with-docs` skill) — a hallucinated API
-  costs far more to debug than one lookup.
-- **Lazy-load skills and docs.** Load a skill only when its trigger fires; keep
-  reference material on disk and pull it in on demand.
-- **Reuse specialist sessions — pass the explicit `task_id`.** Resuming a subagent requires its `task_id` parameter; saying 'reuse the session' without it is a fresh spawn.
-- **Use codemap to skip blind exploration.** Before scattering `glob` calls
-  across an unfamiliar repo, load the `codemap` skill for a structured overview.
-
 ## Task Rejection Contract
 
 Refusing the wrong task early is cheaper than half-doing it. Any agent **must
@@ -203,4 +176,5 @@ assertion.
   before responding.
 - **DCP** (`@tarquinen/opencode-dcp`) — autonomous context pruning and
   deduplication. Compress when a task phase closes; subagent results survive
-  pruning. Tuned in `dcp.jsonc` (schema-verified against v3.1.14).
+  pruning. Tuned in `dcp.jsonc` (the $schema URL is authoritative; @latest +
+  autoUpdate follow plugin releases).

@@ -11,12 +11,11 @@
 - 代理層級：`subagent_depth: 3`（支援 3 級代理巢狀）
 - 模型隔離：`enabled_providers: ["deepseek"]` + `disabled_providers` 雙重鎖
 - 對話分享：關閉（`share: "disabled"`）；快照：開啟（`snapshot: true`）
-- 權限基線：預設放行，破壞性 bash 命令設為 `ask`；`.env` 類敏感檔案 `deny`；外部目錄 `ask`
-- 上下文壓縮：DCP 主動壓縮（60%/30% 百分比閾值，隨模型視窗自適應）+ OpenCode 原生 compaction 兜底（prune 裁舊工具輸出）
-- 全域規則：`AGENTS.md`（核心原則、任務拒絕契約、上下文與 Token 效率、自我驗證、反模式等）
-- 技能：`skills/` 目錄下 **17 個** `SKILL.md` 技能，透過原生 `skill` 工具按需載入
-- 外掛：`superpowers`（14 個過程型技能）、`@tarquinen/opencode-dcp`（智慧上下文裁剪）
-- 實驗功能：`batch_tool` 已預設開啟
+- 權限基線：預設放行，破壞性 bash 命令設為 `ask`；`.env` 類敏感檔案 `deny`；外部目錄 `ask`；唯讀 Agent 的 bash 白名單（預設 deny 全部 + 僅放行唯讀子命令）
+- 上下文壓縮：DCP 60% 閾值主動壓縮 + OpenCode 原生 auto compaction 近溢出兜底，兩層互補（prune 裁舊工具輸出）
+- 全域規則：`AGENTS.md`（核心原則、任務拒絕契約、自我驗證、反模式等；上下文/Token 紀律已下沉到 `orchestrator`）
+- 技能：`skills/` 目錄下 **18 個** `SKILL.md` 技能，透過原生 `skill` 工具按需載入
+- 外掛：`superpowers`（v6.3.0，過程型技能）、`@tarquinen/opencode-dcp`（智慧上下文裁剪）
 
 ## DeepSeek 模型配置
 
@@ -165,6 +164,8 @@ ln -s /path/to/my-opencode-deepseek-config/opencode ~/.config/opencode
 | `light-orchestrator` | v4-flash | 讀寫 | 輕量任務、單檔案編輯 |
 
 > `deep-worker` 和 `light-orchestrator` 遵循「禁止研究、禁止委託」原則——執行而非探索，上下文由 orchestrator 提供。
+>
+> 唯讀 Agent（`oracle`/`reviewer`/`explore`/`librarian`）真唯讀化：`edit: deny` + bash 白名單（預設 deny 全部，僅放行 `git status/diff/log/show/blame/grep`、`rg` 等唯讀子命令；`oracle`/`reviewer` 另允許 `gh pr view/diff`、`gh issue view`、`gh api` 以支援 `/review-pr` 回帖）。
 
 ## 快捷命令
 
@@ -212,40 +213,45 @@ OpenCode 透過原生 `skill` 工具按需暴露技能——Agent 只在需要�
 
 | Skill | 作用 |
 | --- | --- |
-| `code-review` | 雙軸並行審查（規範 + 規約）+ 嚴重度校準 + confirmed/plausible 發現分級（trivial 歸 doc drift）與 Validator pass 輸出前驗證 |
-| `codemap` | 生成帶標註的儲存庫結構圖，節省探索 token |
-| `gh-cli` | GitHub CLI v2.97+ 全面參考（Issues 2.0、copilot、agent-task、gh skill、gh status 待辦盤點）+ 安全警告（轉義注入） |
-| `git-master` | 進階 Git 操作：rebase、squash、bisect、reflog、worktree |
-| `git-release` | Tag 發布：SemVer 推斷、發布說明、gh release 命令 |
-| `resolving-merge-conflicts` | 逐 hunk 解析合併衝突：追溯原始意圖、不發明新行為、永不 --abort |
+| `code-review` | 省 token 多維程式碼審查：按維度+嚴重度分級報告，一致點標最高置信度，從不擅自改碼 |
+| `codemap` | 生成帶標註的儲存庫結構圖，快速定向，節省探索 token |
+| `gh-cli` | GitHub CLI v2.97+ 參考：分頁、儲存庫定位、discussions/projects/rulesets/skills、rate limit、gh-aw agentic CI、gh api 回退 |
+| `git-master` | 進階 Git 操作：rebase、squash、fixup、bisect、reflog、程式碼考古、worktree |
+| `git-release` | Tag 發布：發布說明、SemVer 推斷、gh release 命令 |
+| `resolving-merge-conflicts` | 逐 hunk 解析合併衝突：追溯原始意圖、永不發明新行為、永不 --abort |
 | `handoff` | 壓縮對話為交接文件（路徑引用，不複製內容） |
-| `opencode-config` | 編寫和維護 OpenCode 配置 |
-| `reflect` | 持續改進：發現摩擦 → 提出最小修復 |
-| `remove-deadcode` | 安全尋找並刪除死程式碼，刪除前 LSP 驗證 |
-| `security-review` | 合併前對 diff 做安全審查 |
-| `shared-language` | 建構領域術語表，大幅節省上下文 token |
-| `simplify` | 行為保持的程式碼簡化（oracle 分析 → light-orchestrator 應用） |
-| `spec-workflow` | 輕量規約驅動變更（propose → design → tasks → implement → archive） |
+| `opencode-config` | 編寫和維護本儲存庫 OpenCode 配置（agents/skills/commands/permissions） |
+| `reflect` | 持續改進：發現摩擦 → 提出最小可維護修復 |
+| `remove-deadcode` | 安全尋找並刪除死程式碼，刪除前經工具鏈/LSP 驗證 |
+| `security-review` | 合併前安全審查（注入/XSS/SSRF/金鑰/反序列化/路徑穿越），只報不改 |
+| `shared-language` | 建構領域術語表（CONTEXT.md），大幅節省 token |
+| `simplify` | 行為保持的程式碼簡化（oracle 分析 → 應用） |
+| `spec-workflow` | 輕量規約驅動變更：proposal → specs → design → tasks → archive |
 | `verification-planning` | 實作前規劃最窄驗證路徑 |
-| `verify-with-docs` | 編碼前核對 API 文件，檢索優先，防止幻覺 |
-| `grilling` | 需求對齊訪談：一次一問、多選優先，歧義收斂後再動手（與 AGENTS.md 提問紀律對應） |
+| `verify-with-docs` | 編碼前核對 API 文件，檢索優先，防幻覺 |
+| `grilling` | 需求對齊訪談：一次一問、多選優先，歧義收斂後再動手 |
+| `tech-debt-audit` | 9 維度技術債審計（死程式碼/重複/命名漂移/複雜度/依賴/錯誤處理/測試/文件/安全），唯讀報告不改碼 |
 
 ## 設計決策與迭代記錄
 
-核心思路借鑑了 [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent)（意圖門控、唯讀隔離、反模式）、[oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim)（排程器優先、後備鏈、拒絕契約）、[anomalyco/opencode](https://github.com/anomalyco/opencode)（配置 Schema、技能體系）、[cli/cli](https://github.com/cli/cli)（gh v2.97 完整命令集）、[OpenSpec](https://github.com/Fission-AI/OpenSpec)（delta specs、變更提案更新）、[mattpocock/skills](https://github.com/mattpocock/skills)（衝突解析紀律、交接文件）、[pi](https://github.com/earendil-works/pi)（先答後改、精簡回應）和 [deepreview](https://github.com/mechanai/deepreview)（novelty 分類收斂、有效大小路由）的優點，純配置實作，零額外依賴。
+核心思路借鑑了 [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent)（意圖門控、唯讀隔離、反模式）、[oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim)（排程器優先、後備鏈、拒絕契約、提示詞快取安全、impact×confidence÷cost）、[anomalyco/opencode](https://github.com/anomalyco/opencode)（配置 Schema、技能體系）、[cli/cli](https://github.com/cli/cli)（gh v2.97 命令集、rate limit、gh-aw）、[OpenSpec](https://github.com/Fission-AI/OpenSpec)（delta specs、OPSX 動作流 update/verify/四問）、[mattpocock/skills](https://github.com/mattpocock/skills)（衝突解析紀律、交接文件）、[pi](https://github.com/earendil-works/pi)（先答後改、精簡回應、獨立對話收集）和 [deepreview](https://github.com/mechanai/deepreview)（novelty 分類收斂、有效大小路由、Points of Agreement）的優點，純配置實作，零額外依賴。
 
 > **借鑑而非照搬**：過重的流水線只汲取輕量化設計理念；冗餘功能由現有 agents/skills 覆蓋，不新增。遵循「精簡優先於新增」原則，每次迭代都以淨減 token 為目標。
-> 本輪機制來源：grilling 落地自 mattpocock/skills；發現分級/訊號詞表/一致點標註借鑑 deepreview 的輕量機制；gh status 增補自 cli/cli v2.97 手冊。
+>
+> **本輪（v27）機制來源**：OPSX 動作流（update/verify/四問）內化進 spec-workflow；獨立對話收集上下文、提示詞快取安全（靜態前綴穩定、易變內容放 payload 尾部）借鑑 pi 與 oh-my-opencode-slim；impact×confidence÷cost 迭代把關進入 deep-worker；Points of Agreement（一致點最高置信度標註）借鑑 deepreview；gh-cli 增補 rate limit 與 gh-aw 自 cli/cli v2.97。
+>
+> **評估後未採用**：mattpocock/skills 的漸進式揭露與 wait-what（現有技能惰性載入已覆蓋其價值）；superpowers 無配置旋鈕，保持外掛字串形式注入。
 
 ### 迭代里程碑
 
-自 v1 以來歷經 26 次迭代，持續對標上游儲存庫最佳實踐：
+自 v1 以來歷經 27 次迭代，持續對標上游儲存庫最佳實踐：
 
 - **v1-v7（奠基）**：雙模型繫結、Agent 角色體系、意圖門控路由、AGENTS.md 全域規則、Skills 目錄、權限基線
 - **v8-v15（審查+規約+契約）**：code-review 雙軸校準、spec-workflow、gh-cli 對齊、拒絕契約、後臺核查
 - **v16-v22（持續瘦身）**：命令 29→18（-38%）、AGENTS.md 290→211（-27%）、逐句 no-op 修剪、Schema 校驗去死鍵
 - **v23-v25（對齊+安全）**：整合 6 個上游儲存庫、gh-cli v2.97 轉義注入安全章節、procedure-driven 提示精化、DCP 視窗調優
 - **v26（本輪瘦身）**：prune:true 與 tool_output 800/20480 收緊、DCP 切換 60%/30% 百分比閾值、grilling 引入替代 writing-great-skills、opencode-config 131→64 精簡、code-review 分級+validator、gh-cli 補 gh status、AGENTS.md 增 User Override、orchestrator 委託成本紀律、7 個 agent 檔案淨減 22 行
+- **v27（刪除/遷移/新增）**：刪 batch_tool 死配置、唯讀 agent 無效 `write: deny`、bash 3 條冗餘；Context Management 段遷入 orchestrator 專屬小節；唯讀 agent bash 白名單、read 補 `.env`；新增 tech-debt-audit 技能；15 條技能 description 瘦身 30-40%；gh-cli 補 rate limit/gh skill 宿主/gh-aw 等 5 點、code-review 增 Points of Agreement、spec-workflow 補 update 兩問、orchestrator 增獨立對話收集+提示詞快取安全、deep-worker 增 impact×confidence÷cost
 
 ## 儲存庫結構
 
@@ -264,7 +270,7 @@ OpenCode 透過原生 `skill` 工具按需暴露技能——Agent 只在需要�
 │   │   ├── explore.md            # flash：程式碼庫搜尋（唯讀）
 │   │   ├── librarian.md          # flash：外部檢索（唯讀）
 │   │   └── light-orchestrator.md # flash：簡單編輯
-│   ├── skills/                   # 17 個按需載入技能
+│   ├── skills/                   # 18 個按需載入技能
 │   │   ├── code-review/          # 雙軸並行審查 + 嚴重度校準
 │   │   ├── codemap/              # 生成儲存庫結構圖
 │   │   ├── gh-cli/               # GitHub CLI v2.97+ 參考 + 安全警告
@@ -279,15 +285,16 @@ OpenCode 透過原生 `skill` 工具按需暴露技能——Agent 只在需要�
 │   │   ├── shared-language/      # 領域術語表（節省 token）
 │   │   ├── simplify/             # 行為保持的程式碼簡化
 │   │   ├── spec-workflow/        # 規約驅動開發
+│   │   ├── tech-debt-audit/      # 技術債審計（9 維度，唯讀報告）
 │   │   ├── verification-planning/ # 實作前驗證路徑規劃
 │   │   ├── verify-with-docs/     # 檢索優先 API 驗證
 │   │   └── grilling/             # 需求對齊訪談
 │   ├── opencode.jsonc            # 主配置（18 條命令）
-│   ├── AGENTS.md                 # 全域規則（206 行）
+│   ├── AGENTS.md                 # 全域規則
 │   └── dcp.jsonc                 # DCP 上下文壓縮（DeepSeek 128K，60%/30% 百分比閾值）
 ├── README.md
 ├── LICENSE
-└── README.*.md
+└── README.*.md                   # 其他語言 README
 ```
 
 ## 使用指南

@@ -9,8 +9,9 @@ color: "#8E44AD"
 hidden: true
 permission:
   edit: deny
-  write: deny
   task: deny
+  bash:
+    "*": deny
 ---
 
 # Librarian

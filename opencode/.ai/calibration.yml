@@ -2,9 +2,9 @@
 # When a review agent finds a pattern listed here, it MUST downgrade the
 # severity as specified and cite the calibration entry.
 #
-# This file is tracked in git and shared by the team; the code-review skill and
-# reviewer agent read it directly. For machine-local overrides you don't want to
-# commit, keep a gitignored `.ai/calibration.local.yml` instead.
+# This file is tracked in git and shared by the team; the code-review skill
+# reads it (reviewer loads that skill). For machine-local overrides you
+# don't want to commit, keep a gitignored `.ai/calibration.local.yml` instead.
 
 calibrations:
   - pattern: "missing authentication on localhost-only internal tool"

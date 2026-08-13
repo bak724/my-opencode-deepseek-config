@@ -8,8 +8,20 @@ temperature: 0.2
 color: "#27AE60"
 permission:
   edit: deny
-  write: deny
   task: deny
+  bash:
+    "*": deny
+    "git status*": allow
+    "git diff*": allow
+    "git log*": allow
+    "git show*": allow
+    "git blame*": allow
+    "git grep*": allow
+    "rg *": allow
+    "gh pr view*": allow
+    "gh pr diff*": allow
+    "gh issue view*": allow
+    "gh api*": allow
 ---
 
 # Reviewer

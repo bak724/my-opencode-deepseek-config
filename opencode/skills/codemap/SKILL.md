@@ -1,6 +1,6 @@
 ---
 name: codemap
-description: Generate a structured, hierarchical map of a repository or directory for quick orientation. Use when starting work in an unfamiliar codebase, when the task mentions "project structure", "codebase overview", "directory layout", "what does this repo contain", or when you need a bird's-eye view before diving into specific files. Produces a concise tree with annotations, saving repeated exploration tokens.
+description: Generate a structured, hierarchical map of a repository or directory for quick orientation. Use when starting work in an unfamiliar codebase, when the task mentions "project structure", "codebase overview", "directory layout", "what does this repo contain", or when you need a bird's-eye view before diving into specific files.
 ---
 
 # Codemap

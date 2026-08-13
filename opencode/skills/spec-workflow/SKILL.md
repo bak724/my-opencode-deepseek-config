@@ -1,6 +1,6 @@
 ---
 name: spec-workflow
-description: Run a lightweight, spec-driven change workflow — capture WHY/WHAT in a proposal, define WHAT the system does in specs, decide HOW in a design, break work into a tasks checklist, implement, then archive. Use when the task is a non-trivial feature or behavior change that benefits from durable, git-tracked planning artifacts, or when the request mentions "spec", "proposal", "propose a change", "spec-driven", "openspec", "design doc", "requirements", or "tasks checklist". Not for one-line fixes or pure Q&A.
+description: Run a lightweight, spec-driven change workflow — proposal (WHY/WHAT), specs (WHAT), design (HOW), tasks checklist, then archive. Use when the task is a non-trivial feature or behavior change that benefits from durable, git-tracked planning artifacts, or when the request mentions "spec", "proposal", "propose a change", "spec-driven", "openspec", "design doc", "requirements", or "tasks checklist". Not for one-line fixes or pure Q&A.
 ---
 
 # Spec-Driven Change Workflow
@@ -181,6 +181,8 @@ the artifacts:
   statement) OR scope has exploded (3x+ original). Think of this like git
   branches — a small fixup amends the branch; a direction change creates
   a new branch.
+- `原任务可否独立完成？` (can the original task complete on its own?) and
+  `故事是否连贯？` (is the story coherent?) — "no" to either means create a new change.
 
 ## Action: verify (before archive)
 

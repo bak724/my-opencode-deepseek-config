@@ -1,6 +1,6 @@
 ---
 name: shared-language
-description: Use when the task mentions domain language, CONTEXT.md, terminology, shared vocabulary, or when the same concepts are being explained repeatedly in different sessions. Builds and maintains a shared language document that drastically reduces token consumption.
+description: Use when the task mentions domain language, CONTEXT.md, terminology, shared vocabulary, or when the same concepts are being explained repeatedly in different sessions. Builds and maintains a shared language document.
 ---
 
 # Shared Language

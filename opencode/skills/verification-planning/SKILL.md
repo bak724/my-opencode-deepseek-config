@@ -1,6 +1,6 @@
 ---
 name: verification-planning
-description: Plan verification before implementation — choose the narrowest verification path for a change. Use when about to implement, before writing code, or when the task mentions "how will we verify", "verification plan", "evidence before claiming done".
+description: Plan verification before implementation — choose the narrowest verification path. Use when about to implement, before writing code, or when the task mentions "how will we verify", "verification plan", "evidence before claiming done".
 ---
 
 # Verification Planning

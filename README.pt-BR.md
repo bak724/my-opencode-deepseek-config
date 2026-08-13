@@ -11,12 +11,11 @@
 - Hierarquia de agents: `subagent_depth: 3` (suporta até 3 níveis de agents aninhados)
 - Isolamento de modelos: bloqueio duplo com `enabled_providers: ["deepseek"]` + `disabled_providers`
 - Compartilhamento de sessão: desativado (`share: "disabled"`); snapshots: ativados (`snapshot: true`)
-- Baseline de permissões: permitir por padrão, comandos bash destrutivos configurados como `ask`; arquivos sensíveis como `.env` com `deny`; diretórios externos com `ask`
-- Compressão de contexto: compressão proativa via DCP (limiares percentuais 60%/30%, adaptativos à janela do modelo) + compactação nativa do OpenCode como fallback (prune remove saídas antigas de ferramentas)
-- Regras globais: `AGENTS.md` (princípios fundamentais, contrato de recusa de tarefas, eficiência de contexto e tokens, autoverificação, antipadrões, etc.)
-- Skills: **17** arquivos `SKILL.md` no diretório `skills/`, carregados sob demanda pela ferramenta nativa `skill`
-- Plugins: `superpowers` (14 skills de processo), `@tarquinen/opencode-dcp` (poda inteligente de contexto)
-- Funcionalidades experimentais: `batch_tool` ativada por padrão
+- Baseline de permissões: permitir por padrão, comandos bash destrutivos configurados como `ask`; arquivos sensíveis como `.env` com `deny`; diretórios externos com `ask`; whitelist de bash para agents somente leitura (negar tudo por padrão + permitir apenas subcomandos de leitura)
+- Compressão de contexto: compressão proativa DCP com limiar de 60% + auto compaction nativa do OpenCode como fallback ao se aproximar do estouro, duas camadas complementares (prune remove saídas antigas de ferramentas)
+- Regras globais: `AGENTS.md` (princípios fundamentais, contrato de recusa de tarefas, autoverificação, antipadrões, etc.; a disciplina de contexto/tokens foi transferida para o `orchestrator`)
+- Skills: **18** arquivos `SKILL.md` no diretório `skills/`, carregados sob demanda pela ferramenta nativa `skill`
+- Plugins: `superpowers` (v6.3.0, skills de processo), `@tarquinen/opencode-dcp` (poda inteligente de contexto)
 
 ## Configuração dos modelos DeepSeek
 
@@ -124,7 +123,7 @@ ln -s /path/to/my-opencode-deepseek-config/opencode ~/.config/opencode
 
 Inicie o OpenCode e confirme:
 1. `/models` → o modelo atual é `deepseek/deepseek-v4-pro`
-2. A lista de agents deve exibir `orchestrator`, `planner`, `deep-worker` — 10 agents no total
+2. A lista de agents deve exibir 10 agents: `orchestrator`, `planner`, `deep-worker`, etc.
 3. Envie qualquer requisição — o Orchestrator analisa automaticamente a intenção e faz o roteamento
 
 ## Divisão de funções entre modelos
@@ -165,6 +164,8 @@ Este repositório se restringe estritamente aos dois modelos DeepSeek V4, sem in
 | `light-orchestrator` | v4-flash | leitura/escrita | Tarefas leves, edições em arquivo único |
 
 > `deep-worker` e `light-orchestrator` seguem o princípio "proibido pesquisar, proibido delegar" — executam, não exploram; o contexto é fornecido pelo orchestrator.
+>
+> Os agents somente leitura (`oracle`/`reviewer`/`explore`/`librarian`) são realmente somente leitura: `edit: deny` + whitelist de bash (negar tudo por padrão, permitindo apenas subcomandos de leitura como `git status/diff/log/show/blame/grep`, `rg`, etc.; `oracle`/`reviewer` também permitem `gh pr view/diff`, `gh issue view`, `gh api` para suportar a resposta do `/review-pr`).
 
 ## Comandos rápidos
 
@@ -212,40 +213,45 @@ O OpenCode expõe skills sob demanda pela ferramenta nativa `skill` — os agent
 
 | Skill | Função |
 | --- | --- |
-| `code-review` | Revisão paralela em dois eixos (convenções + especificação) + calibração de severidade + classificação de achados confirmed/plausible (trivial encaminhado a doc drift) com validação de saída pelo Validator pass |
-| `codemap` | Gerar mapa anotado da estrutura do repositório, economizando tokens de exploração |
-| `gh-cli` | Referência completa do GitHub CLI v2.97+ (Issues 2.0, copilot, agent-task, gh skill, inventário de pendências via gh status) + alerta de segurança (injeção de escape) |
-| `git-master` | Operações avançadas de Git: rebase, squash, bisect, reflog, worktree |
-| `git-release` | Release com tag: inferência de SemVer, notas de release, comando gh release |
-| `resolving-merge-conflicts` | Resolver conflitos de merge por hunk: rastrear intenção original, nunca inventar comportamento, nunca --abort |
-| `handoff` | Compactar sessão em documento de transição (referência por caminho, sem copiar conteúdo) |
-| `opencode-config` | Escrever e manter configurações do OpenCode |
-| `reflect` | Melhoria contínua: identificar atritos → propor correções mínimas |
-| `remove-deadcode` | Encontrar e remover código morto com segurança, verificação LSP antes da exclusão |
-| `security-review` | Auditoria de segurança sobre o diff antes do merge |
-| `shared-language` | Construir glossário de domínio, economizando drasticamente tokens de contexto |
-| `simplify` | Simplificação de código com preservação de comportamento (oracle analisa → light-orchestrator aplica) |
-| `spec-workflow` | Alterações leves orientadas a especificação (propose → design → tasks → implement → archive) |
+| `code-review` | Revisão de código multidimensional com economia de tokens: relatório classificado por dimensão + severidade, pontos de acordo marcados com confiança máxima, nunca altera código por conta própria |
+| `codemap` | Gerar mapa anotado da estrutura do repositório para orientação rápida, economizando tokens de exploração |
+| `gh-cli` | Referência do GitHub CLI v2.97+: paginação, localização de repositórios, discussions/projects/rulesets/skills, rate limit, CI agêntico gh-aw, fallback para gh api |
+| `git-master` | Operações avançadas de Git: rebase, squash, fixup, bisect, reflog, arqueologia de código, worktree |
+| `git-release` | Release com tag: notas de release, inferência de SemVer, comando gh release |
+| `resolving-merge-conflicts` | Resolver conflitos de merge por hunk: rastrear a intenção original, nunca inventar comportamento novo, nunca --abort |
+| `handoff` | Compactar a sessão em um documento de transição (referência por caminho, sem copiar conteúdo) |
+| `opencode-config` | Escrever e manter a configuração do OpenCode deste repositório (agents/skills/commands/permissions) |
+| `reflect` | Melhoria contínua: identificar atritos → propor correções mínimas e sustentáveis |
+| `remove-deadcode` | Buscar e remover código morto com segurança, com verificação prévia pela cadeia de ferramentas/LSP |
+| `security-review` | Revisão de segurança antes do merge (injeção/XSS/SSRF/segredos/desserialização/path traversal), apenas reporta, não modifica |
+| `shared-language` | Construir glossário de domínio (CONTEXT.md), economizando drasticamente tokens |
+| `simplify` | Simplificação de código com preservação de comportamento (oracle analisa → aplicar) |
+| `spec-workflow` | Alterações leves orientadas a especificação: proposal → specs → design → tasks → archive |
 | `verification-planning` | Planejar o caminho mais restrito de verificação antes da implementação |
-| `verify-with-docs` | Verificar assinaturas de API na documentação antes de codificar — retrieval-first, prevenindo alucinações |
-| `grilling` | Entrevista de alinhamento de requisitos: uma pergunta por vez, prioridade a múltipla escolha, agir só após convergir ambiguidades (corresponde à disciplina de perguntas do AGENTS.md) |
+| `verify-with-docs` | Verificar a documentação da API antes de codificar, retrieval-first, prevenindo alucinações |
+| `grilling` | Entrevista de alinhamento de requisitos: uma pergunta por vez, prioridade a múltipla escolha, agir só após convergir a ambiguidade |
+| `tech-debt-audit` | Auditoria de dívida técnica em 9 dimensões (código morto/duplicação/deriva de nomes/complexidade/dependências/tratamento de erros/testes/documentação/segurança), relatório somente leitura sem alterar código |
 
 ## Decisões de design e registro de iterações
 
-A abordagem central foi inspirada nos pontos fortes de [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent) (gate de intenção, isolamento de somente leitura, antipadrões), [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim) (orquestrador prioritário, cadeia de fallback, contrato de recusa), [anomalyco/opencode](https://github.com/anomalyco/opencode) (schema de configuração, ecossistema de skills), [cli/cli](https://github.com/cli/cli) (gh v2.97, conjunto completo de comandos), [OpenSpec](https://github.com/Fission-AI/OpenSpec) (delta specs, atualização de propostas de alteração), [mattpocock/skills](https://github.com/mattpocock/skills) (disciplina de resolução de conflitos, documentos de transição), [pi](https://github.com/earendil-works/pi) (responder primeiro, editar depois; respostas concisas) e [deepreview](https://github.com/mechanai/deepreview) (convergência baseada em novidade, roteamento por tamanho efetivo). Implementação puramente por configuração, zero dependências adicionais.
+A abordagem central foi inspirada nos pontos fortes de [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent) (gate de intenção, isolamento de somente leitura, antipadrões), [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim) (orquestrador prioritário, cadeia de fallback, contrato de recusa, segurança de cache de prompts, impact×confidence÷cost), [anomalyco/opencode](https://github.com/anomalyco/opencode) (schema de configuração, ecossistema de skills), [cli/cli](https://github.com/cli/cli) (conjunto de comandos gh v2.97, rate limit, gh-aw), [OpenSpec](https://github.com/Fission-AI/OpenSpec) (delta specs, fluxo de ações OPSX update/verify/quatro perguntas), [mattpocock/skills](https://github.com/mattpocock/skills) (disciplina de resolução de conflitos, documentos de transição), [pi](https://github.com/earendil-works/pi) (responder primeiro, editar depois; respostas concisas; coleta de contexto em sessões independentes) e [deepreview](https://github.com/mechanai/deepreview) (convergência por classificação de novidade, roteamento por tamanho efetivo, Points of Agreement). Implementação puramente por configuração, zero dependências adicionais.
 
 > **Inspiração, não cópia**: pipelines excessivamente pesados tiveram apenas seus princípios de design leve absorvidos; funcionalidades redundantes são cobertas pelos agents/skills existentes, sem adições. Seguindo o princípio "enxugar antes de adicionar", cada iteração visa a redução líquida de tokens.
-> Origem dos mecanismos desta rodada: grilling vem de mattpocock/skills; classificação de achados / tabela de palavras-sinal / marcação de pontos consensuais inspirados nos mecanismos leves do deepreview; gh status acrescentado do manual do cli/cli v2.97.
+>
+> **Origem dos mecanismos desta rodada (v27)**: o fluxo de ações OPSX (update/verify/quatro perguntas) é internalizado no spec-workflow; a coleta de contexto em sessões independentes e a segurança de cache de prompts (prefixos estáticos estáveis, conteúdo variável no final do payload) vêm de pi e oh-my-opencode-slim; o controle iterativo impact×confidence÷cost entra no deep-worker; Points of Agreement (marcar pontos de acordo com confiança máxima) vem do deepreview; gh-cli acrescenta rate limit e gh-aw do cli/cli v2.97.
+>
+> **Avaliado e descartado**: a divulgação progressiva e o wait-what de mattpocock/skills (o carregamento preguiçoso de skills existente já cobre seu valor); superpowers não tem botões de configuração, mantido injetado como string de plugin.
 
 ### Marcos das iterações
 
-26 iterações desde a v1, continuamente alinhadas com as melhores práticas:
+27 iterações desde a v1, continuamente alinhadas com as melhores práticas dos repositórios upstream:
 
-- **v1-v7 (Fundação)**: Vinculação de modelo duplo, sistema de funções de agentes, roteamento por intenção, regras globais AGENTS.md, diretório skills, base de permissões
+- **v1-v7 (Fundação)**: Vinculação de modelo duplo, sistema de funções de agents, roteamento por intenção, regras globais AGENTS.md, diretório skills, base de permissões
 - **v8-v15 (Revisão + Specs + Contratos)**: code-review calibração de eixo duplo, spec-workflow, alinhamento gh-cli, contrato de rejeição, verificações em segundo plano
 - **v16-v22 (Emagrecimento contínuo)**: Comandos 29→18 (-38%), AGENTS.md 290→211 (-27%), corte no-op, validação de esquema
 - **v23-v25 (Alinhamento + Segurança)**: 6 repositórios upstream integrados, gh-cli v2.97 alerta de injeção de escape, refinamento procedure-driven de prompts, ajuste DCP
-- **v26 (Enxugamento desta rodada)**: prune:true e tool_output 800/20480 mais restritos, DCP migrado para limiares percentuais 60%/30%, grilling no lugar de writing-great-skills, opencode-config 131→64 enxugado, code-review classificação de achados + validator, gh-cli acrescenta gh status, AGENTS.md ganha User Override, disciplina de custo de delegação do orchestrator, 7 arquivos de agentes com redução líquida de 22 linhas
+- **v26 (Enxugamento desta rodada)**: prune:true e tool_output 800/20480 mais restritos, DCP migrado para limiares percentuais 60%/30%, grilling no lugar de writing-great-skills, opencode-config 131→64 enxugado, code-review classificação de achados + validator, gh-cli acrescenta gh status, AGENTS.md ganha User Override, disciplina de custo de delegação do orchestrator, 7 arquivos de agents com redução líquida de 22 linhas
+- **v27 (Remoções/Migração/Novidades)**: remove a configuração morta batch_tool, o inútil `write: deny` dos agents somente leitura e 3 redundâncias de bash; a seção de gerenciamento de contexto migra para a subseção exclusiva do orchestrator; whitelist de bash para agents somente leitura e `read` complementado com `.env`; nova skill tech-debt-audit; 15 descrições de skills enxugadas em 30-40%; gh-cli acrescenta rate limit/hospedagem de gh skill/gh-aw entre outros 5 pontos, code-review ganha Points of Agreement, spec-workflow ganha duas perguntas de update, orchestrator ganha coleta em sessões independentes + segurança de cache de prompts, deep-worker ganha impact×confidence÷cost
 
 ## Estrutura do repositório
 
@@ -264,26 +270,27 @@ A abordagem central foi inspirada nos pontos fortes de [oh-my-openagent](https:/
 │   │   ├── explore.md            # flash: busca no codebase (somente leitura)
 │   │   ├── librarian.md          # flash: buscas externas (somente leitura)
 │   │   └── light-orchestrator.md # flash: edições simples
-│   ├── skills/                   # 17 skills carregadas sob demanda
+│   ├── skills/                   # 18 skills carregadas sob demanda
 │   │   ├── code-review/          # Revisão paralela em dois eixos + calibração de severidade
 │   │   ├── codemap/              # Gerar mapa da estrutura do repositório
 │   │   ├── gh-cli/               # Referência do GitHub CLI v2.97+ + alerta segurança
 │   │   ├── git-master/           # Operações avançadas de Git
 │   │   ├── git-release/          # Release com tag
-│   │   ├── resolving-merge-conflicts/ # Disciplina de resolução de conflitos por hunk
 │   │   ├── handoff/              # Compactar sessão em documento de transição
 │   │   ├── opencode-config/      # Meta-skill: escrever configurações deste repositório
 │   │   ├── reflect/              # Melhoria contínua
 │   │   ├── remove-deadcode/      # Detecção e remoção de código morto
+│   │   ├── resolving-merge-conflicts/ # Disciplina de resolução de conflitos por hunk
 │   │   ├── security-review/      # Checklist de auditoria de segurança
 │   │   ├── shared-language/      # Glossário de domínio (economia de tokens)
 │   │   ├── simplify/             # Simplificação de código com preservação de comportamento
 │   │   ├── spec-workflow/        # Desenvolvimento orientado a especificação
+│   │   ├── tech-debt-audit/      # Auditoria de dívida técnica (9 dimensões, relatório somente leitura)
 │   │   ├── verification-planning/ # Planejamento do caminho de verificação pré-implementação
 │   │   ├── verify-with-docs/     # Verificação de API retrieval-first
 │   │   └── grilling/             # Entrevista de alinhamento de requisitos
 │   ├── opencode.jsonc            # Configuração principal (18 comandos)
-│   ├── AGENTS.md                 # Regras globais (206 linhas)
+│   ├── AGENTS.md                 # Regras globais
 │   └── dcp.jsonc                 # Compressão de contexto DCP (DeepSeek 128K, limiares percentuais 60%/30%)
 ├── README.md
 ├── LICENSE

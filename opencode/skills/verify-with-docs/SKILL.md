@@ -1,6 +1,6 @@
 ---
 name: verify-with-docs
-description: Verify a specific or fast-moving library, framework, or API against its current documentation before writing code — retrieval-first, never from memory. Use when implementing against a named dependency (especially one that changes fast or whose exact signatures matter), when unsure of an API's current shape, or when the task mentions "which version", "latest API", "did this change", "check the docs", "SDK", or a specific library/framework by name. Prevents hallucinated signatures and version drift.
+description: Verify a specific or fast-moving library, framework, or API against its current documentation before writing code — retrieval-first, never from memory. Use when implementing against a named dependency (especially one that changes fast or whose exact signatures matter), when unsure of an API's current shape, or when the task mentions "which version", "latest API", "did this change", "check the docs", "SDK", or a specific library/framework by name.
 ---
 
 # Verify With Docs (Retrieval-First)

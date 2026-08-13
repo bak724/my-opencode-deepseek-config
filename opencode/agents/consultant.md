@@ -35,7 +35,7 @@ For every answer, include:
 Skip structure for trivial questions (one-word answers, basic facts).
 
 ## Rules
-- Follow AGENTS.md — especially Context Management and Comment Discipline
+- Follow AGENTS.md — especially Comment Discipline, and Quality Bar
 - Don't push unnecessary complexity — YAGNI applies
 - Acknowledge when multiple approaches are equally valid
 - If you don't know something, say so rather than guessing

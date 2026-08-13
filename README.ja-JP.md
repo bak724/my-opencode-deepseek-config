@@ -11,12 +11,11 @@
 - エージェント階層：`subagent_depth: 3`（3 階層のサブエージェントネストをサポート）
 - モデル分離：`enabled_providers: ["deepseek"]` + `disabled_providers` による二重ロック
 - セッション共有：無効（`share: "disabled"`）；スナップショット：有効（`snapshot: true`）
-- 権限ベースライン：デフォルト許可、破壊的 bash コマンドは `ask`；`.env` 等の機密ファイルは `deny`；外部ディレクトリは `ask`
-- コンテキスト圧縮：DCP 能動的圧縮（60%/30% パーセント閾値、モデルウィンドウに応じて適応）+ OpenCode ネイティブ compaction によるフォールバック（prune で古いツール出力を破棄）
-- グローバルルール：`AGENTS.md`（中核原則、タスク拒否契約、コンテキストとトークン効率、自己検証、アンチパターン等）
-- スキル：`skills/` ディレクトリ配下の **17 個**の `SKILL.md` スキル、ネイティブ `skill` ツールでオンデマンド読み込み
-- プラグイン：`superpowers`（14 個のプロセス型スキル）、`@tarquinen/opencode-dcp`（インテリジェントコンテキストトリミング）
-- 実験的機能：`batch_tool` がデフォルトで有効
+- 権限ベースライン：デフォルト許可、破壊的 bash コマンドは `ask`；`.env` 等の機密ファイルは `deny`；外部ディレクトリは `ask`；読み取り専用エージェントの bash ホワイトリスト（デフォルト全 deny + 読み取り専用サブコマンドのみ許可）
+- コンテキスト圧縮：DCP 60% 閾値による能動的圧縮 + OpenCode ネイティブ auto compaction がオーバーフロー間際をフォールバック、二層で相互補完（prune で古いツール出力を破棄）
+- グローバルルール：`AGENTS.md`（中核原則、タスク拒否契約、自己検証、アンチパターン等；コンテキスト/トークン規律は `orchestrator` へ移譲）
+- スキル：`skills/` ディレクトリ配下の **18 個**の `SKILL.md` スキル、ネイティブ `skill` ツールでオンデマンド読み込み
+- プラグイン：`superpowers`（v6.3.0、プロセス型スキル）、`@tarquinen/opencode-dcp`（インテリジェントコンテキストトリミング）
 
 ## DeepSeek モデル設定
 
@@ -165,6 +164,8 @@ OpenCode を起動して以下を確認する：
 | `light-orchestrator` | v4-flash | 読み書き | 軽量タスク、単一ファイル編集 |
 
 > `deep-worker` と `light-orchestrator` は「研究禁止・委任禁止」の原則に従う——実行のみ、探索は行わず、コンテキストは orchestrator が提供する。
+>
+> 読み取り専用エージェント（`oracle`/`reviewer`/`explore`/`librarian`）は真の読み取り専用化：`edit: deny` + bash ホワイトリスト（デフォルト全 deny、`git status/diff/log/show/blame/grep`、`rg` 等の読み取り専用サブコマンドのみ許可；`oracle`/`reviewer` は `/review-pr` の返信投稿をサポートするため `gh pr view/diff`、`gh issue view`、`gh api` も追加で許可）。
 
 ## ショートカットコマンド
 
@@ -212,40 +213,45 @@ OpenCode はネイティブ `skill` ツールを通じてスキルをオンデ�
 
 | スキル | 役割 |
 | --- | --- |
-| `code-review` | 二軸並行レビュー（規約 + 仕様）+ 重大度キャリブレーション + confirmed/plausible 発見の分類（trivial は doc drift へ）と Validator pass による出力前検証 |
-| `codemap` | 注釈付きリポジトリ構造図の生成、探索トークンの節約 |
-| `gh-cli` | GitHub CLI v2.97+ 完全リファレンス（Issues 2.0、copilot、agent-task、gh skill）+ セキュリティ警告（エスケープインジェクション）+ gh status による TODO 棚卸し |
-| `git-master` | 高度な Git 操作：rebase、squash、bisect、reflog、worktree |
-| `git-release` | タグリリース：SemVer 推論、リリースノート、gh release コマンド |
-| `resolving-merge-conflicts` | コンフリクトをhunkごとに解決：元の意図を追跡し、新しい動作を発明せず、--abortは絶対に使用しない |
+| `code-review` | トークン節約型の多次元コードレビュー：次元別+重大度別の段階報告、一致点には最高信頼度を付与、勝手にコードを書き換えない |
+| `codemap` | 注釈付きリポジトリ構造図の生成、素早いオリエンテーション、探索トークンの節約 |
+| `gh-cli` | GitHub CLI v2.97+ リファレンス：ページネーション、リポジトリ特定、discussions/projects/rulesets/skills、rate limit、gh-aw agentic CI、gh api フォールバック |
+| `git-master` | 高度な Git 操作：rebase、squash、fixup、bisect、reflog、コード考古学、worktree |
+| `git-release` | タグリリース：リリースノート、SemVer 推論、gh release コマンド |
+| `resolving-merge-conflicts` | マージコンフリクトを hunk ごとに解決：元の意図を追跡、新しい動作を発明しない、--abort は絶対に使用しない |
 | `handoff` | セッションを引継ぎドキュメントに圧縮（パス参照、内容コピーなし） |
-| `opencode-config` | OpenCode 設定の作成と保守 |
-| `reflect` | 継続的改善：摩擦の発見 → 最小限の修正を提案 |
-| `remove-deadcode` | デッドコードの安全な検索と削除、削除前に LSP 検証 |
-| `security-review` | マージ前の diff に対するセキュリティレビュー |
-| `shared-language` | ドメイン用語集の構築、コンテキストトークンの大幅節約 |
-| `simplify` | 振る舞いを保持したコード簡略化（oracle 解析 → light-orchestrator 適用） |
-| `spec-workflow` | 軽量仕様駆動変更（propose → design → tasks → implement → archive） |
+| `opencode-config` | 本リポジトリの OpenCode 設定の作成と保守（agents/skills/commands/permissions） |
+| `reflect` | 継続的改善：摩擦の発見 → 最小限で保守可能な修正を提案 |
+| `remove-deadcode` | デッドコードの安全な検索と削除、削除前にツールチェーン/LSP で検証 |
+| `security-review` | マージ前セキュリティレビュー（インジェクション/XSS/SSRF/秘密鍵/デシリアライゼーション/パストラバーサル）、報告のみで修正しない |
+| `shared-language` | ドメイン用語集（CONTEXT.md）の構築、トークンの大幅節約 |
+| `simplify` | 振る舞いを保持したコード簡略化（oracle の解析 → 適用） |
+| `spec-workflow` | 軽量仕様駆動変更：proposal → specs → design → tasks → archive |
 | `verification-planning` | 実装前に最も狭い検証パスを計画 |
-| `verify-with-docs` | コーディング前に API ドキュメントを検証、検索優先、幻覚防止 |
-| `grilling` | 要件アラインメントインタビュー：一問ずつ、多肢選択優先、曖昧さが収束してから着手（AGENTS.md の質問規律に対応） |
+| `verify-with-docs` | コーディング前に API ドキュメントを照合、検索優先、幻覚防止 |
+| `grilling` | 要件アラインメントインタビュー：一問ずつ、多肢選択優先、曖昧さが収束してから着手 |
+| `tech-debt-audit` | 9 次元の技術的負債監査（デッドコード/重複/命名ドリフト/複雑性/依存/エラー処理/テスト/ドキュメント/セキュリティ）、読み取り専用の報告でコード修正はしない |
 
 ## 設計判断とイテレーション記録
 
-中核となる考え方は [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent)（意図ゲーティング、読み取り専用分離、アンチパターン）、[oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim)（スケジューラー優先、フォールバックチェーン、拒否契約）、[anomalyco/opencode](https://github.com/anomalyco/opencode)（設定スキーマ、スキル体系）、[cli/cli](https://github.com/cli/cli)（gh v2.97 完全コマンドセット）、[OpenSpec](https://github.com/Fission-AI/OpenSpec)（delta specs、変更提案更新）、[mattpocock/skills](https://github.com/mattpocock/skills)（conflict resolution discipline, handoff docs）、[pi](https://github.com/earendil-works/pi)（先に回答し後から編集、簡潔な応答）、[deepreview](https://github.com/mechanai/deepreview)（novelty-based convergence, effective-size routing）の長所を参考にし、純粋な設定で実現、追加依存ゼロである。
+中核となる考え方は [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent)（意図ゲーティング、読み取り専用分離、アンチパターン）、[oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim)（スケジューラー優先、フォールバックチェーン、拒否契約、プロンプトキャッシュ安全、impact×confidence÷cost）、[anomalyco/opencode](https://github.com/anomalyco/opencode)（設定スキーマ、スキル体系）、[cli/cli](https://github.com/cli/cli)（gh v2.97 コマンドセット、rate limit、gh-aw）、[OpenSpec](https://github.com/Fission-AI/OpenSpec)（delta specs、OPSX アクションフロー update/verify/四つの問い）、[mattpocock/skills](https://github.com/mattpocock/skills)（コンフリクト解決規律、引継ぎドキュメント）、[pi](https://github.com/earendil-works/pi)（先に回答し後から編集、簡潔な応答、独立セッションでのコンテキスト収集）、[deepreview](https://github.com/mechanai/deepreview)（novelty 分類収束、実効サイズルーティング、Points of Agreement）の長所を参考にし、純粋な設定で実現、追加依存ゼロである。
 
 > **参考であって模倣ではない**：過重なパイプラインからは軽量設計理念のみを抽出。冗長機能は既存の agents/skills でカバーし、新規追加は行わない。「削減を追加より優先」の原則に従い、各イテレーションでトークンの純減を目標とする。
-> 本ラウンドのメカニズム出典：grilling は mattpocock/skills から実装；発見の分類/シグナル語表/一致点アノテーションは deepreview の軽量メカニズムを参考；gh status は cli/cli v2.97 マニュアルから増補。
+>
+> **本ラウンド（v27）のメカニズム出典**：OPSX アクションフロー（update/verify/四つの問い）を spec-workflow に内化；独立セッションでのコンテキスト収集、プロンプトキャッシュ安全（静的プレフィックスの安定化、変動しやすい内容はペイロード末尾に配置）は pi と oh-my-opencode-slim から参考；impact×confidence÷cost によるイテレーション関門は deep-worker へ導入；Points of Agreement（一致点に最高信頼度を付与）は deepreview から参考；gh-cli に rate limit と gh-aw を cli/cli v2.97 から増補。
+>
+> **評価後に不採用**：mattpocock/skills の段階的開示と wait-what（既存スキルの遅延読み込みがその価値をカバー済み）；superpowers は設定ノブがないため、プラグイン文字列形式での注入を維持。
 
 ### イテレーションマイルストーン
 
-v1から26回の反復、継続的にアップストリームのベストプラクティスに整合：
+v1 から 27 回のイテレーションを経て、継続的にアップストリームリポジトリのベストプラクティスに整合：
 
-- **v1-v7（基盤）**: デュアルモデルバインディング、エージェントロールシステム、インテントゲートルーティング、AGENTS.mdグローバルルール、Skillsディレクトリ、権限ベースライン
-- **v8-v15（レビュー+仕様+契約）**: code-reviewデュアル軸キャリブレーション、spec-workflow、gh-cli整合、拒否契約、バックグラウンドチェック
-- **v16-v22（継続的スリム化）**: コマンド29→18（-38%）、AGENTS.md 290→211（-27%）、no-opトリミング、スキーマ検証
-- **v23-v25（整合+セキュリティ）**: 6つのアップストリームリポジトリを統合、gh-cli v2.97エスケープインジェクション警告、procedure-drivenプロンプト改善、DCPウィンドウチューニング
-- **v26（今回のスリム化）**: prune:true と tool_output 800/20480 の引き締め、DCP が 60%/30% パーセント閾値に切替、grilling を導入し writing-great-skills を置換、opencode-config 131→64 にスリム化、code-review 発見の分類+validator、gh-cli に gh status を追加、AGENTS.md に User Override を追加、orchestrator の委任コスト規律、7つのエージェントファイルで正味22行削減
+- **v1-v7（基盤）**：デュアルモデルバインディング、エージェントロール体系、意図ゲートルーティング、AGENTS.md グローバルルール、Skills ディレクトリ、権限ベースライン
+- **v8-v15（レビュー+仕様+契約）**：code-review 二軸キャリブレーション、spec-workflow、gh-cli 整合、拒否契約、バックグラウンド検証
+- **v16-v22（継続的スリム化）**：コマンド 29→18（-38%）、AGENTS.md 290→211（-27%）、文ごとの no-op トリミング、Schema 検証による死キー削除
+- **v23-v25（整合+セキュリティ）**：6 つのアップストリームリポジトリを統合、gh-cli v2.97 エスケープインジェクションのセキュリティ章、procedure-driven プロンプトの精緻化、DCP ウィンドウチューニング
+- **v26（今回のスリム化）**：prune:true と tool_output 800/20480 の引き締め、DCP を 60%/30% パーセント閾値へ切替、grilling を導入し writing-great-skills を置換、opencode-config 131→64 にスリム化、code-review の段階化+validator、gh-cli に gh status を追加、AGENTS.md に User Override を追加、orchestrator の委任コスト規律、7 つのエージェントファイルで正味 22 行削減
+- **v27（削除/移行/新規）**：batch_tool の死設定を削除、読み取り専用エージェントの無効な `write: deny` を削除、bash の冗長 3 行を削除；Context Management 節を orchestrator 専用サブセクションへ移行；読み取り専用エージェントの bash ホワイトリストを追加、read に `.env` を追加；tech-debt-audit スキルを新規追加；15 個のスキル description を 30-40% スリム化；gh-cli に rate limit/gh skill ホスト/gh-aw 等 5 点を増補、code-review に Points of Agreement を追加、spec-workflow に update の二つの問いを追加、orchestrator に独立セッション収集+プロンプトキャッシュ安全を追加、deep-worker に impact×confidence÷cost を追加
 
 ## リポジトリ構造
 
@@ -264,30 +270,31 @@ v1から26回の反復、継続的にアップストリームのベストプラ�
 │   │   ├── explore.md            # flash：コードベース検索（読み取り専用）
 │   │   ├── librarian.md          # flash：外部検索（読み取り専用）
 │   │   └── light-orchestrator.md # flash：単純編集
-│   ├── skills/                   # 17 個のオンデマンドスキル
+│   ├── skills/                   # 18 個のオンデマンドスキル
 │   │   ├── code-review/          # 二軸並行レビュー + 重大度キャリブレーション
 │   │   ├── codemap/              # リポジトリ構造図の生成
 │   │   ├── gh-cli/               # GitHub CLI v2.97+ リファレンス + セキュリティ警告
 │   │   ├── git-master/           # 高度な Git 操作
 │   │   ├── git-release/          # タグリリース
-│   │   ├── resolving-merge-conflicts/ # コンフリクト解決規律
 │   │   ├── handoff/              # セッションを引継ぎドキュメントに圧縮
 │   │   ├── opencode-config/      # メタスキル：本リポジトリ設定の作成
 │   │   ├── reflect/              # 継続的改善
 │   │   ├── remove-deadcode/      # デッドコード検出と削除
+│   │   ├── resolving-merge-conflicts/ # hunk ごとのコンフリクト解決規律
 │   │   ├── security-review/      # セキュリティレビューチェックリスト
 │   │   ├── shared-language/      # ドメイン用語集（トークン節約）
 │   │   ├── simplify/             # 振る舞いを保持したコード簡略化
 │   │   ├── spec-workflow/        # 仕様駆動開発
+│   │   ├── tech-debt-audit/      # 技術的負債監査（9 次元、読み取り専用の報告）
 │   │   ├── verification-planning/ # 実装前検証パス計画
 │   │   ├── verify-with-docs/     # 検索優先 API 検証
 │   │   └── grilling/             # 要件アラインメントインタビュー
 │   ├── opencode.jsonc            # メイン設定（18 コマンド）
-│   ├── AGENTS.md                 # グローバルルール（206 行）
+│   ├── AGENTS.md                 # グローバルルール
 │   └── dcp.jsonc                 # DCP コンテキスト圧縮（DeepSeek 128K、60%/30% パーセント閾値）
 ├── README.md
 ├── LICENSE
-└── README.*.md
+└── README.*.md                   # 他言語の README
 ```
 
 ## 利用ガイド

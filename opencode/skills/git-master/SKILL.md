@@ -1,6 +1,6 @@
 ---
 name: git-master
-description: Advanced Git operations beyond basic add/commit/push — atomic commits, rebase, squash, fixup, blame, bisect, reflog, code archaeology (git log -S/-G), and worktree management. Use when the task mentions rebase, squash, bisect, blame, reflog, fixup, finding deleted code, tracing commit history, cleaning up a branch, or recovering lost work.
+description: Advanced Git operations — rebase, squash, fixup, blame, bisect, reflog, code archaeology (git log -S/-G), worktrees. Use when the task mentions rebase, squash, bisect, blame, reflog, fixup, finding deleted code, tracing commit history, cleaning up a branch, or recovering lost work.
 ---
 
 # Git Master

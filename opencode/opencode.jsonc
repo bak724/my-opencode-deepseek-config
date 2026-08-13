@@ -14,6 +14,7 @@
     "permission": {
         "read": {
             "*": "allow",
+            ".env": "deny",
             "*.env": "deny",
             "*.env.*": "deny",
             "*.env.example": "allow"
@@ -22,10 +23,7 @@
             "*": "allow",
             "rm -rf*": "ask",
             "rm -fr*": "ask",
-            "rm -rf *": "ask",
-            "rm -fr *": "ask",
             "Remove-Item -Recurse -Force*": "ask",
-            "rd /s /q*": "ask",
             "rd /s*": "ask",
             "del /f /s*": "ask",
             "del /f /q*": "ask",
@@ -58,9 +56,6 @@
             "description": "Official opencode docs, schema, and configuration examples"
         }
     },
-    "experimental": {
-        "batch_tool": true
-    },
     // Built-in utility agents (no .md file). Pro for primary work, Flash for
     // background chores. `fallback` is not a real schema key — omitted; OpenCode
     // already falls back small_model -> model internally when a model is missing.
@@ -79,8 +74,9 @@
         "max_lines": 800,
         "max_bytes": 20480
     },
-    // prune:true lets native compaction drop stale tool outputs; DCP only does
-    // range compression + dedup, so the two complement rather than overlap.
+    // DCP compresses proactively at its 60% threshold (see dcp.jsonc); native
+    // auto compaction is the near-overflow fallback. prune:true drops stale tool
+    // outputs, so the two layers complement rather than overlap.
     "compaction": {
         "auto": true,
         "prune": true,

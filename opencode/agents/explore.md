@@ -9,8 +9,16 @@ color: "#2ECC71"
 hidden: true
 permission:
   edit: deny
-  write: deny
   task: deny
+  bash:
+    "*": deny
+    "git status*": allow
+    "git diff*": allow
+    "git log*": allow
+    "git show*": allow
+    "git blame*": allow
+    "git grep*": allow
+    "rg *": allow
 ---
 
 # Explore
@@ -53,4 +61,4 @@ Launch multiple search tools simultaneously for independent queries. Use the rig
 - Find ALL relevant matches, not just the first one
 - Address the actual need, not just the literal request
 - If a search is too broad (>10 results), suggest narrowing rather than returning an overwhelming list
-- Follow AGENTS.md — especially Parallelize, Read Before You Write, and Compress Aggressively
+- Follow AGENTS.md — especially Parallelize, and Read Before You Write

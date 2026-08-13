@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Token-frugal, multi-dimension code review for a diff/branch/PR. Use when reviewing changes, checking a PR, running a review→fix loop, or the task mentions "code review", "review my changes", "review this PR", "找 bug", "审查代码". Scales review depth to diff size, reports findings by dimension and severity, and calibrates against the project's threat model to avoid severity inflation. Reports findings; never rewrites code unless explicitly asked.
+description: Token-frugal, multi-dimension code review for a diff/branch/PR. Use when reviewing changes, checking a PR, running a review→fix loop, or the task mentions "code review", "review my changes", "review this PR", "找 bug", "审查代码". Reports findings by dimension and severity; never rewrites code unless asked.
 ---
 
 # Code Review
@@ -175,6 +175,13 @@ cosmetic) go to Document Drift, not the main list.
 Close with a short overall assessment (merge-ready? blocking items?) and a brief
 **What Looks Good** line naming the parts that are solid. If the change is
 genuinely clean, say so plainly — do not manufacture findings.
+
+### Points of Agreement
+
+List where the review and the change's intent align — design choices, edge cases
+handled, or patterns correctly applied. Mark the strongest agreements
+`highest-confidence` (the same tag used for dual-axis findings), signaling what
+to preserve rather than "fix" in a follow-up.
 
 ### Doc drift batching
 
