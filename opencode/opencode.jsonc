@@ -4,7 +4,6 @@
     "model": "deepseek/deepseek-v4-pro",
     "small_model": "deepseek/deepseek-v4-flash",
     "enabled_providers": ["deepseek"],
-    "disabled_providers": ["openai", "anthropic", "google", "openrouter"],
     "autoupdate": "notify",
     "share": "disabled",
     "snapshot": true,

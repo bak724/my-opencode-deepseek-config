@@ -2,26 +2,26 @@
 
 [简体中文](README.md) | [繁體中文](README.zh-TW.md) | [English](README.en-US.md) | [Русский](README.ru-RU.md) | [Français](README.fr-FR.md) | [Deutsch](README.de-DE.md) | [Español](README.es-ES.md) | [Português](README.pt-BR.md) | [日本語](README.ja-JP.md) | **한국어**
 
-**OpenCode × DeepSeek 최적 설정** —— OpenCode 멀티 에이전트 프레임워크에서 DeepSeek V4 듀얼 모델(Pro + Flash)의 성능을 극대화하는 구성 방안입니다. 핵심 이념: **토큰 효율성 우선, 최소한의 컨텍스트 비용으로 최상의 개발 결과를 달성합니다**.
+**OpenCode × DeepSeek 최적 설정** —— OpenCode 멀티 에이전트 프레임워크에서 DeepSeek V4 듀얼 모델(Pro + Flash)의 성능을 극대화하는 구성 방안입니다. 핵심 이념: **토큰 효율 우선, 최소한의 컨텍스트 비용으로 최고의 개발 성과를 냅니다**.
 
 ## 현재 구성 개요
 
 - 기본 주 에이전트: `orchestrator`
 - 주 모델: `deepseek/deepseek-v4-pro`, 경량 모델: `deepseek/deepseek-v4-flash`
 - 에이전트 계층: `subagent_depth: 3`(3단계 에이전트 중첩 지원)
-- 모델 격리: `enabled_providers: ["deepseek"]` + `disabled_providers` 이중 잠금
+- 모델 격리: `enabled_providers: ["deepseek"]` 단일 잠금
 - 세션 공유: 비활성화(`share: "disabled"`); 스냅샷: 활성화(`snapshot: true`)
 - 권한 기준: 기본 허용, 파괴적 bash 명령은 `ask`로 설정; `.env`류 민감 파일은 `deny`; 외부 디렉터리는 `ask`; 읽기 전용 에이전트의 bash 화이트리스트(기본 전부 deny + 읽기 전용 하위 명령만 허용)
-- 컨텍스트 압축: DCP 60% 임계값 능동 압축 + OpenCode 네이티브 auto compaction 오버플로 임박 백업, 두 계층 상호 보완(prune으로 오래된 도구 출력 정리)
+- 컨텍스트 압축: 내장 compaction(opencode.jsonc)은 자동 트리거 + prune으로 오래된 도구 출력 정리, DCP(dcp.jsonc)는 능동 중복 제거 + 압축 임계값 담당, 둘은 상호 보완
 - 전역 규칙: `AGENTS.md`(핵심 원칙, 작업 거부 계약, 자체 검증, 안티 패턴 등; 컨텍스트/토큰 규율은 `orchestrator`로 하향 이동)
-- 스킬: `skills/` 디렉터리 아래 **18개** `SKILL.md` 스킬, 네이티브 `skill` 도구를 통해 필요 시 로드
+- 스킬: `skills/` 디렉터리 아래 **23개** `SKILL.md` 스킬, 네이티브 `skill` 도구로 필요 시 로드
 - 플러그인: `superpowers`(v6.3.0, 프로세스형 스킬), `@tarquinen/opencode-dcp`(지능형 컨텍스트 가지치기)
 
 ## DeepSeek 모델 구성
 
 ### 사전 조건
 
-- OpenCode ≥ v1.14.24(DeepSeek provider 내장)
+- OpenCode ≥ v1.18.x(DeepSeek provider 내장)
 - DeepSeek API Key: [platform.deepseek.com/api_keys](https://platform.deepseek.com/api_keys)에서 신청
 
 ### 방식 1: TUI 대화형 구성(권장)
@@ -50,8 +50,7 @@ opencode
 {
   "model": "deepseek/deepseek-v4-pro",
   "small_model": "deepseek/deepseek-v4-flash",
-  "enabled_providers": ["deepseek"],
-  "disabled_providers": ["openai", "anthropic", "google", "openrouter"]
+  "enabled_providers": ["deepseek"]
 }
 ```
 
@@ -213,7 +212,7 @@ OpenCode는 네이티브 `skill` 도구를 통해 필요 시 스킬을 노출합
 
 | 스킬 | 역할 |
 | --- | --- |
-| `code-review` | 토큰 절약형 다차원 코드 리뷰: 차원+심각도 등급별 보고, 합치점 최고 신뢰도 표기, 절대 임의로 코드 수정 안 함 |
+| `code-review` | 토큰 절약형 다차원 코드 리뷰: 차원+심각도 등급별 보고, 합치점 최고 신뢰도 표기, deepreview 자체 반증, 절대 임의로 코드 수정 안 함 |
 | `codemap` | 주석이 포함된 저장소 구조도 생성, 빠른 방향 설정, 탐색 토큰 절약 |
 | `gh-cli` | GitHub CLI v2.97+ 참조: 페이지네이션, 저장소 타게팅, discussions/projects/rulesets/skills, rate limit, gh-aw agentic CI, gh api 폴백 |
 | `git-master` | 고급 Git 작업: rebase, squash, fixup, bisect, reflog, 코드 고고학, worktree |
@@ -231,6 +230,11 @@ OpenCode는 네이티브 `skill` 도구를 통해 필요 시 스킬을 노출합
 | `verify-with-docs` | 코딩 전 API 문서 확인, 검색 우선, 환각 방지 |
 | `grilling` | 요구사항 정렬 인터뷰: 한 번에 한 가지 질문, 객관식 우선, 모호성 수렴 후 착수 |
 | `tech-debt-audit` | 9차원 기술 부채 감사(데드 코드/중복/네이밍 드리프트/복잡도/의존성/오류 처리/테스트/문서/보안), 읽기 전용 보고로 코드 수정 안 함 |
+| `wait-what` | 사용자 메시지가 난해할 때 한 문장으로 재진술해 확인한 뒤 착수 |
+| `writing-for-agents` | 에이전트가 읽는 문서(skill/AGENTS.md/포인터 문서)의 작성 레버리지 |
+| `to-questionnaire` | 오프채널 일회성 설문지(비동기 작성), grilling의 실시간 인터뷰와 구별 |
+| `research` | 개방형 주제 심층 조사, 인용 포함 Markdown 산출, verify-with-docs의 단일 지점 확인과 구별 |
+| `wizard` | 사람이 직접 수행하는 단계별 마법사(bash 스크립트, `bash -n` 검증), 인간만 가능한 단계를 안내 |
 
 ## 설계 결정과 반복 기록
 
@@ -238,13 +242,13 @@ OpenCode는 네이티브 `skill` 도구를 통해 필요 시 스킬을 노출합
 
 > **참고하되 그대로 베끼지 않음**: 지나치게 무거운 파이프라인은 경량 설계 이념만 추출합니다. 중복 기능은 기존 agents/skills가 커버하며, 새로 추가하지 않습니다. "추가보다 간소화 우선" 원칙을 따르며, 매 반복마다 토큰 순감소를 목표로 합니다.
 >
-> **이번 라운드(v27) 메커니즘 출처**: OPSX 액션 플로우(update/verify/네 가지 질문)는 spec-workflow에 내재화; 독립 세션 컨텍스트 수집, 프롬프트 캐시 안전(정적 프리픽스 안정, 변동 콘텐츠는 페이로드 끝에 배치)은 pi와 oh-my-opencode-slim에서 차용; impact×confidence÷cost 반복 심사는 deep-worker에 도입; Points of Agreement(합치점 최고 신뢰도 표기)는 deepreview에서 차용; gh-cli는 cli/cli v2.97에서 rate limit과 gh-aw 보강.
+> **이번 라운드(v28) 메커니즘 출처**: DeepSeek 캐시+thinking 규율, scope-first+위임 우선, 원자적 TODO가 AGENTS.md로 하향 이동; 신규 5개 스킬(wait-what/writing-for-agents/to-questionnaire/research/wizard)로 23개 달성; gh-cli에 GHSA 보안 항목 4개 보강; code-review에 deepreview 자체 반증 융합; .ai/calibration.yml 삭제(보정 규칙은 code-review에 인라인).
 >
-> **평가 후 미채택**: mattpocock/skills의 점진적 공개와 wait-what(기존 스킬 지연 로딩이 그 가치를 이미 커버); superpowers는 구성 노브가 없어 플러그인 문자열 형태 주입 유지.
+> **평가 후 미채택**: mattpocock/skills의 나머지 프로세스형 스킬(code-review, tdd, implement 등 — superpowers/기존 스킬과 중복); superpowers는 구성 노브가 없어 플러그인 문자열 형태 주입 유지.
 
 ### 반복 마일스톤
 
-v1 이후 27회 반복, 지속적으로 업스트림 저장소 모범 사례에 정렬:
+v1 이후 28회 반복, 지속적으로 업스트림 저장소 모범 사례에 정렬:
 
 - **v1-v7 (기반)**: 듀얼 모델 바인딩, 에이전트 역할 시스템, 의도 게이트 라우팅, AGENTS.md 글로벌 규칙, Skills 디렉토리, 권한 기준
 - **v8-v15 (리뷰 + 사양 + 계약)**: code-review 듀얼 축 보정, spec-workflow, gh-cli 정렬, 거부 계약, 백그라운드 확인
@@ -252,13 +256,12 @@ v1 이후 27회 반복, 지속적으로 업스트림 저장소 모범 사례에 
 - **v23-v25 (정렬 + 보안)**: 6개 업스트림 저장소 통합, gh-cli v2.97 이스케이프 인젝션 보안 섹션, procedure-driven 프롬프트 정제, DCP 창 튜닝
 - **v26 (이번 라운드 슬림화)**: prune:true와 tool_output 800/20480 강화, DCP 60%/30% 백분율 임계값 전환, grilling 도입으로 writing-great-skills 대체, opencode-config 131→64 간소화, code-review 등급화+validator, gh-cli gh status 보강, AGENTS.md User Override 추가, orchestrator 위임 비용 규율, 에이전트 파일 7개에서 순 22줄 감소
 - **v27 (삭제/이동/신규)**: batch_tool 데드 구성 삭제, 읽기 전용 에이전트의 무효한 `write: deny`, bash 3개 중복 제거; Context Management 섹션을 orchestrator 전용 하위 섹션으로 이동; 읽기 전용 에이전트 bash 화이트리스트, read에 `.env` 보강; tech-debt-audit 스킬 신규 추가; 15개 스킬 description 30-40% 슬림화; gh-cli에 rate limit/gh skill 호스트/gh-aw 등 5개 항목 보강, code-review에 Points of Agreement 추가, spec-workflow에 update 두 가지 질문 보강, orchestrator에 독립 세션 수집+프롬프트 캐시 안전 추가, deep-worker에 impact×confidence÷cost 추가
+- **v28 (규율 재구성)**: 캐시+thinking 규율, scope-first+위임 우선, 원자적 TODO를 AGENTS.md로 하향 이동; 신규 5개 스킬로 23개 달성; gh-cli에 GHSA 4개 보강; code-review에 deepreview 자체 반증 융합; .ai/calibration.yml 삭제(규칙은 code-review에 인라인); README 10개 언어 동기화
 
 ## 저장소 구조
 
 ```text
 ├── opencode/                     # OpenCode 구성 디렉터리(독립 배포 가능)
-│   ├── .ai/
-│   │   └── calibration.yml       # code-review 심각도 보정
 │   ├── agents/                   # 10개 전담 에이전트
 │   │   ├── orchestrator.md       # 주 진입점: 의도 게이트 + 모델 인식 라우팅
 │   │   ├── planner.md            # pro: 아키텍처와 계획
@@ -270,7 +273,7 @@ v1 이후 27회 반복, 지속적으로 업스트림 저장소 모범 사례에 
 │   │   ├── explore.md            # flash: 코드베이스 검색(읽기 전용)
 │   │   ├── librarian.md          # flash: 외부 검색(읽기 전용)
 │   │   └── light-orchestrator.md # flash: 간단한 편집
-│   ├── skills/                   # 18개 필요 시 로드 스킬
+│   ├── skills/                   # 23개 필요 시 로드 스킬
 │   │   ├── code-review/          # 이중 축 병렬 리뷰 + 심각도 보정
 │   │   ├── codemap/              # 저장소 구조도 생성
 │   │   ├── gh-cli/               # GitHub CLI v2.97+ 참조 + 보안 경고
@@ -288,7 +291,12 @@ v1 이후 27회 반복, 지속적으로 업스트림 저장소 모범 사례에 
 │   │   ├── tech-debt-audit/      # 기술 부채 감사(9차원, 읽기 전용 보고)
 │   │   ├── verification-planning/ # 구현 전 검증 경로 계획
 │   │   ├── verify-with-docs/     # 검색 우선 API 검증
-│   │   └── grilling/             # 요구사항 정렬 인터뷰
+│   │   ├── grilling/             # 요구사항 정렬 인터뷰
+│   │   ├── research/             # 개방형 주제 심층 조사(인용 포함)
+│   │   ├── to-questionnaire/     # 오프채널 일회성 설문지
+│   │   ├── wait-what/            # 난해한 메시지 한 문장 재진술 확인
+│   │   ├── wizard/               # 사람이 직접 수행하는 단계별 마법사(bash -n 검증)
+│   │   └── writing-for-agents/   # 에이전트를 위한 문서 작성
 │   ├── opencode.jsonc            # 주 구성(18개 명령)
 │   ├── AGENTS.md                 # 전역 규칙
 │   └── dcp.jsonc                 # DCP 컨텍스트 압축(DeepSeek 128K, 60%/30% 백분율 임계값)
@@ -347,7 +355,10 @@ v1 이후 27회 반복, 지속적으로 업스트림 저장소 모범 사례에 
 
 - **순수 구성 주도, 추가 의존성 없음** —— 모든 기능은 `opencode.jsonc` + `agents/*.md` + `skills/*/SKILL.md` + `AGENTS.md`로 구현
 - **DeepSeek V4 듀얼 모델 극한 활용** —— Pro는 추론과 의사 결정을, Flash는 조회와 경량 실행을 담당
-- **토큰 효율성 우선** —— 파일 붙여넣기 대신 경로 참조, 스킬 필요 시 로드, 압축 계층적 관리
-- **플러그인은 효율을 높이되 주객전도 금지** —— superpowers는 프로세스 규율 제공, DCP 지능형 압축으로 단순 절단 대체(백분율 임계값 자동 적응, 네이티브 compaction 백업)
+- **토큰 효율 우선** —— 파일 붙여넣기 대신 경로 참조, 스킬 필요 시 로드, 압축 계층적 관리
+- **플러그인은 효율을 높이되 주객전도 금지** —— superpowers는 프로세스 규율 제공, DCP(dcp.jsonc)는 능동 중복 제거+압축 임계값, 내장 compaction(opencode.jsonc)은 자동 트리거+prune 보완
 - **실행과 탐색 분리** —— deep-worker/light-orchestrator는 연구/위임 금지, explore/librarian은 수정 금지
+- **캐시와 thinking 규율** —— 정적 프리픽스 안정화로 DeepSeek 프롬프트 캐시 적중; 코딩 작업은 0 온도; thinking은 추론 작업에만 켜고 단순/검색 작업은 끔
+- **Scope First + Delegate Always** —— 먼저 범위를 정하고(2+ 단계/다중 파일/아키텍처 변경은 planner 선행), 그다음 실행을 위임, 최상위 토큰은 라우팅과 난제에만 사용
+- **원자적 TODO** —— 다단계 작업은 먼저 순서 있는 TODO를 작성하고, 항목별로 in_progress→completed; 형식 `path: action for scenario — verify by check`
 - **지속적 개선** —— reflect로 마찰 체계적 발견, code-review 이중 축 보정으로 품질 보장

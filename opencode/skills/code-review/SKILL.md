@@ -41,6 +41,11 @@ wire contract|serializ`. A hit upgrades the depth; no hit keeps the default.
 Abbreviated is the default — it costs ~an order of magnitude fewer tokens.
 State which path you took, the effective size, and any stakes trigger in one line.
 
+**Scope constraint:** report only findings attributable to this diff. Nothing
+outside the blast radius — not pre-existing unchanged code, not unrelated files.
+ADRs and other historical decision documents are records, not living specs: do
+not flag them stale.
+
 ## Review dimensions (dual-axis)
 
 Dispatch TWO parallel passes covering all dimensions the diff touches. Skip
@@ -99,6 +104,9 @@ unused imports, leftover TODOs, debug prints; confirm new functions have callers
 - **nit** — style/naming/comment polish. Report only if it compounds into a
   maintainability problem; otherwise omit.
 
+Assign only the level the evidence supports — when in doubt, go one level down,
+never up.
+
 ## Severity calibration (fight inflation)
 
 Judge impact in context against the project's actual threat model and conventions.
@@ -119,6 +127,12 @@ model (localhost tool? public service? internal tool? library?), and repo visibi
 - Prefer one accurate high-severity finding over ten inflated ones.
 - If a whole category consistently doesn't apply here, say so once and suggest
   recording it in AGENTS.md.
+- **Standing downgrades** — apply the downgrade and cite the reason in the report:
+  - localhost-only auth/credential issues → **low** at most (no external exposure);
+  - `console.log` in a CLI tool → **nit** (CLI output is intentional user-facing logging);
+  - hardcoded API key in dev/test config → **minor** (dev-only, not deployed).
+- When stage / deployment model / threat model are unknown, prefer the lower
+  severity — under-claim rather than over-claim.
 
 ### Suppress known-design noise
 
@@ -126,22 +140,20 @@ Treat documented decisions (from caller's context note, `.opencode/decisions.md`
 or `AGENTS.md`/`CLAUDE.md`) as intentional. Flag only when the diff makes a
 documented choice concretely unsafe.
 
-## Calibration
-
-Before assigning severity, read `.ai/calibration.yml` if it exists. For any
-finding whose pattern matches a calibration entry, apply the specified
-downgrade and cite the entry in the report. This prevents the same
-low-priority finding from being flagged as high in every review.
-
 ## Validator pass (before output)
 
-Default to **rejection** — every finding must survive scrutiny. Verify each
-finding against four checks before writing it:
+Default to **rejection** — every finding must survive scrutiny. For **each**
+finding, write one counter-argument first ("it only fires on admin paths / input
+is validated upstream at line M / the failing case is unreachable here"). If the
+counter is as strong as or stronger than the finding, discard it; if the evidence
+can't settle the matter, downgrade or delete rather than report it unconfirmed.
 
-1. **Falsifiability** — build a counter-argument. If the counter ("it only fires
-   on admin paths / input is validated upstream at line M") is stronger than the
-   finding, discard it.
-2. **Severity** — would this hold under a second reviewer? Downgrade if unsure.
+Then verify the surviving findings against these gates:
+
+1. **Falsifiability** — the counter-argument must be resolvable with evidence,
+   not hand-waving. A finding that survives no concrete challenge is a guess.
+2. **Severity** — would this hold under a second reviewer? Downgrade if unsure;
+   only claim the level the evidence supports, never raise on a hunch.
 3. **Preference vs defect** — style opinions the project doesn't enforce are not
    review items.
 4. **Evidence** — the citation must be correct and inside the diff's blast radius.
@@ -172,9 +184,12 @@ proportionate) or **plausible** (likely but not fully traced). Lead with
 confirmed findings within each severity level. **trivial** findings (real but
 cosmetic) go to Document Drift, not the main list.
 
-Close with a short overall assessment (merge-ready? blocking items?) and a brief
-**What Looks Good** line naming the parts that are solid. If the change is
-genuinely clean, say so plainly — do not manufacture findings.
+Close with a short overall assessment (merge-ready? blocking items?).
+
+### What Looks Good
+
+A required section naming the parts that are solid. If the change is genuinely
+clean, say so plainly — do not manufacture findings.
 
 ### Points of Agreement
 
@@ -185,10 +200,10 @@ to preserve rather than "fix" in a follow-up.
 
 ### Doc drift batching
 
-Non-critical documentation findings are batched into a single `## Document Drift`
-section as a checklist, not scattered across the report. Route **trivial**
-findings here too. Only surface a docs finding as its own entry when it is
-genuinely dangerous (a false claim that could cause API misuse, a
+A required section: non-critical documentation findings are batched into a single
+`## Document Drift` section as a checklist, not scattered across the report.
+Route **trivial** findings here too. Only surface a docs finding as its own entry
+when it is genuinely dangerous (a false claim that could cause API misuse, a
 security-critical misleading comment).
 
 ### Large reviews — communicate through files

@@ -59,6 +59,7 @@ When relevant:
 
 ## Rules
 - Follow AGENTS.md — especially Read Before You Write, and Quality Bar
+- Follow AGENTS.md cache and scope discipline (Cache & Thinking / Scope First + Delegate Always).
 - Anchor claims to specific code locations with file:line references
 - If uncertain, use hedged language: "Based on the provided context…"
 - Quote the minimum relevant lines (≤5) rather than entire functions

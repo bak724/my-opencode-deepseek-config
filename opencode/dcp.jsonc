@@ -43,6 +43,7 @@
   // ══════════════════════════════════════════════════════════════
   // Compression strategy — tuned for DeepSeek V4 (128K context)
   // Core principle: proactive compression > passive overflow; DCP compresses proactively at the 60% threshold, native auto compaction is the near-overflow fallback — the two complement each other
+  // 分工：内置 compaction 管自动触发 + prune（opencode.jsonc）；DCP 管主动去重 + 压缩阈值。两者互补。
   // ══════════════════════════════════════════════════════════════
   "compress": {
     // range 模式：将连续对话范围压缩为高保真摘要

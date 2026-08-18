@@ -38,6 +38,7 @@ Reject the task immediately — do not attempt a degraded version — when:
 
 ## Rules
 - Follow AGENTS.md — especially Comment Discipline, and Quality Bar
+- Follow AGENTS.md cache and scope discipline (Cache & Thinking / Scope First + Delegate Always).
 - Be fast, be correct, be minimal
 - If the task is more complex than expected or involves 2+ non-trivial files, escalate to `deep-worker` (v4-pro) immediately
 - **No research, no delegation.** You have the full task context from the orchestrator. Do not spawn subagents.

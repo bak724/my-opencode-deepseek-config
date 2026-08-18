@@ -2,39 +2,39 @@
 
 [简体中文](README.md) | [繁體中文](README.zh-TW.md) | [English](README.en-US.md) | [Русский](README.ru-RU.md) | [Français](README.fr-FR.md) | [Deutsch](README.de-DE.md) | [Español](README.es-ES.md) | [Português](README.pt-BR.md) | **日本語** | [한국어](README.ko-KR.md)
 
-**OpenCode × DeepSeek 最適構成** —— OpenCode のマルチエージェントフレームワーク上で、DeepSeek V4 デュアルモデル（Pro + Flash）の能力を最大限に引き出す構成である。中核理念：**トークン効率を最優先し、最小限のコンテキストコストで最高の開発成果を得る**。
+**OpenCode × DeepSeek 最適構成** —— OpenCode のマルチエージェントフレームワーク上で、DeepSeek V4 デュアルモデル（Pro + Flash）の能力を最大限に引き出す構成。中核理念：**トークン効率を最優先し、最小限のコンテキストコストで最高の開発成果を得る**。
 
 ## 現在の構成概要
 
 - デフォルト主エージェント：`orchestrator`
 - メインモデル：`deepseek/deepseek-v4-pro`、軽量モデル：`deepseek/deepseek-v4-flash`
-- エージェント階層：`subagent_depth: 3`（3 階層のサブエージェントネストをサポート）
-- モデル分離：`enabled_providers: ["deepseek"]` + `disabled_providers` による二重ロック
+- エージェント階層：`subagent_depth: 3`（3 段階のエージェントネストをサポート）
+- モデル分離：`enabled_providers: ["deepseek"]` 単一ロック
 - セッション共有：無効（`share: "disabled"`）；スナップショット：有効（`snapshot: true`）
-- 権限ベースライン：デフォルト許可、破壊的 bash コマンドは `ask`；`.env` 等の機密ファイルは `deny`；外部ディレクトリは `ask`；読み取り専用エージェントの bash ホワイトリスト（デフォルト全 deny + 読み取り専用サブコマンドのみ許可）
-- コンテキスト圧縮：DCP 60% 閾値による能動的圧縮 + OpenCode ネイティブ auto compaction がオーバーフロー間際をフォールバック、二層で相互補完（prune で古いツール出力を破棄）
-- グローバルルール：`AGENTS.md`（中核原則、タスク拒否契約、自己検証、アンチパターン等；コンテキスト/トークン規律は `orchestrator` へ移譲）
-- スキル：`skills/` ディレクトリ配下の **18 個**の `SKILL.md` スキル、ネイティブ `skill` ツールでオンデマンド読み込み
-- プラグイン：`superpowers`（v6.3.0、プロセス型スキル）、`@tarquinen/opencode-dcp`（インテリジェントコンテキストトリミング）
+- 権限ベースライン：デフォルト許可、破壊的な bash コマンドは `ask`；`.env` 系の機密ファイルは `deny`；外部ディレクトリは `ask`；読み取り専用エージェントは bash ホワイトリスト（デフォルト全 deny + 読み取り専用サブコマンドのみ許可）
+- コンテキスト圧縮：内蔵 compaction（opencode.jsonc）が自動トリガー + prune で旧ツール出力を刈り込み、DCP（dcp.jsonc）が能動的な重複排除 + 圧縮閾値を担当。両者は相互補完
+- グローバルルール：`AGENTS.md`（コア原則、タスク拒否契約、自己検証、アンチパターンなど；コンテキスト/トークン規律は `orchestrator` に集約）
+- スキル：`skills/` ディレクトリに **23 個**の `SKILL.md` スキル。ネイティブの `skill` ツールでオンデマンド読み込み
+- プラグイン：`superpowers`（v6.3.0、プロセス型スキル）、`@tarquinen/opencode-dcp`（インテリジェントなコンテキスト刈り込み）
 
-## DeepSeek モデル設定
+## DeepSeek モデル構成
 
 ### 前提条件
 
-- OpenCode ≥ v1.14.24（DeepSeek プロバイダーは内蔵）
-- DeepSeek API Key：[platform.deepseek.com/api_keys](https://platform.deepseek.com/api_keys) から申請
+- OpenCode ≥ v1.18.x（DeepSeek プロバイダーは内蔵）
+- DeepSeek API キー：[platform.deepseek.com/api_keys](https://platform.deepseek.com/api_keys) で申請
 
-### 方式一：TUI 対話式設定（推奨）
+### 方法 1：TUI 対話型設定（推奨）
 
 ```bash
 opencode
-# TUI 内で入力: /connect → DeepSeek を選択 → API Key を貼り付け
-# 次に: /models → deepseek-v4-pro を選択
+# TUI で入力: /connect → DeepSeek を選択 → API キーを貼り付け
+# その後: /models → deepseek-v4-pro を選択
 ```
 
-API Key は自動的に `~/.local/share/opencode/auth.json` へ永続化される。
+API キーは `~/.local/share/opencode/auth.json` に自動的に永続化されます。
 
-### 方式二：環境変数
+### 方法 2：環境変数
 
 Windows PowerShell:
 ```powershell
@@ -42,20 +42,19 @@ $env:DEEPSEEK_API_KEY="sk-your-key-here"
 opencode
 ```
 
-恒久設定：`DEEPSEEK_API_KEY` をシステム環境変数に追加する。
+永続設定：システム環境変数に `DEEPSEEK_API_KEY` を追加します。
 
-### プロバイダー設定リファレンス
+### プロバイダー構成リファレンス
 
 ```jsonc
 {
   "model": "deepseek/deepseek-v4-pro",
   "small_model": "deepseek/deepseek-v4-flash",
-  "enabled_providers": ["deepseek"],
-  "disabled_providers": ["openai", "anthropic", "google", "openrouter"]
+  "enabled_providers": ["deepseek"]
 }
 ```
 
-Pro モデルで thinking/reasoning を有効にする場合、`provider` に以下を追加する：
+Pro モデルで thinking/reasoning を有効にする場合、`provider` に追記します：
 
 ```jsonc
 "provider": {
@@ -71,25 +70,25 @@ Pro モデルで thinking/reasoning を有効にする場合、`provider` に以
 }
 ```
 
-> **モデル ID 命名規則**：`provider_id/model_id`、すなわち `deepseek/deepseek-v4-pro` および `deepseek/deepseek-v4-flash`。
+> **モデル ID 命名規則**：`provider_id/model_id`、すなわち `deepseek/deepseek-v4-pro` と `deepseek/deepseek-v4-flash`。
 
 ## インストールとデプロイ
 
-### 方式一：クローン + 環境変数（推奨、クロスプラットフォーム対応）
+### 方法 1：クローン + 環境変数（推奨、クロスプラットフォーム共通）
 
 ```bash
 git clone https://github.com/znlgis/my-opencode-deepseek-config.git
 ```
 
-その後、`OPENCODE_CONFIG_DIR` をリポジトリ内の `opencode/` サブディレクトリに向けるだけで使用できる。
+その後、`OPENCODE_CONFIG_DIR` をリポジトリ内の `opencode/` サブディレクトリに向ければ使用できます。
 
-**Windows（PowerShell）** —— 恒久設定：
+**Windows（PowerShell）** —— 永続的に有効：
 
 ```powershell
 [Environment]::SetEnvironmentVariable("OPENCODE_CONFIG_DIR", "D:\path\to\my-opencode-deepseek-config\opencode", "User")
 ```
 
-**Windows（PowerShell）** —— 一時設定（現在のセッションのみ）：
+**Windows（PowerShell）** —— 一時的に有効（現在のセッションのみ）：
 
 ```powershell
 $env:OPENCODE_CONFIG_DIR = "D:\path\to\my-opencode-deepseek-config\opencode"
@@ -102,7 +101,7 @@ opencode
 export OPENCODE_CONFIG_DIR="$HOME/path/to/my-opencode-deepseek-config/opencode"
 ```
 
-### 方式二：シンボリックリンクでグローバル設定ディレクトリへ
+### 方法 2：グローバル設定ディレクトリへのシンボリックリンク
 
 **Windows（PowerShell、管理者権限が必要）：**
 
@@ -117,179 +116,188 @@ New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.config\opencode" -Targe
 ln -s /path/to/my-opencode-deepseek-config/opencode ~/.config/opencode
 ```
 
-> **互換性に関する注意**：`~/.config/opencode` は OpenCode の標準グローバル設定パスである。本リポジトリの `opencode/` サブディレクトリには `agents/`、`skills/`、`AGENTS.md` 等のファイルが含まれており、そのレイアウトは完全に OpenCode の規約に従っている。環境変数またはシンボリックリンクで指定すれば自動認識される。
+> **互換性メモ**：`~/.config/opencode` は OpenCode の標準グローバル設定パス。本リポジトリの `opencode/` サブディレクトリには `agents/`、`skills/`、`AGENTS.md` などのファイルが含まれ、レイアウトは完全に OpenCode の規約に準拠しており、環境変数またはシンボリックリンクで指し示すだけで自動認識されます。
 
-### インストールの検証
+### インストール確認
 
-OpenCode を起動して以下を確認する：
+OpenCode を起動して確認：
 1. `/models` → 現在のモデルが `deepseek/deepseek-v4-pro` であること
-2. エージェント一覧に `orchestrator`、`planner`、`deep-worker` 等 10 個のエージェントが表示されること
-3. 任意のリクエストを入力し、Orchestrator が自動的に意図を分析してルーティングすること
+2. Agent リストに `orchestrator`、`planner`、`deep-worker` など 10 個のエージェントが表示されること
+3. 任意のリクエストを入力すると、Orchestrator が自動的に意図を分析してルーティングすること
 
 ## モデル分業
 
-本リポジトリは DeepSeek V4 デュアルモデル内での分業に厳格に限定し、他のモデルを導入しない：
+本リポジトリは DeepSeek V4 デュアルモデル内の分業に厳格に限定し、他のモデルは導入しません：
 
 | モデル | 用途 |
 | --- | --- |
-| `deepseek/deepseek-v4-pro` | 計画、アーキテクチャ、根本原因解析、コードレビュー、重量級実装、マスタースケジューリング |
-| `deepseek/deepseek-v4-flash` | 高速探索、外部検索、軽量タスク、単純編集 |
+| `deepseek/deepseek-v4-pro` | 計画、アーキテクチャ、根本原因分析、コードレビュー、重量級実装、統括スケジューリング |
+| `deepseek/deepseek-v4-flash` | 高速探索、外部検索、軽量タスク、単純な編集 |
 
 ### ルーティング戦略
 
-- **Flash 優先**：検索、ルックアップ、単純編集等、明確に定義されたタスクは Flash エージェントを優先
-- **Pro は推論に集中**：計画、解析、レビュー、複雑な実装——Pro のみ使用
-- **自動昇格**：Flash エージェントが処理不能な場合、自動的に Pro へ昇格（完全なコンテキスト付き）
+- **Flash 優先**：検索、ルックアップ、単純な編集など明確に定義されたタスクは flash エージェントを優先
+- **Pro は推論に専念**：計画、分析、レビュー、複雑な実装——pro のみを使用
+- **自動昇格**：flash エージェントで対応できない場合は自動的に pro へ昇格（完全なコンテキスト付き）
 
-## エージェント構造
+## Agent 構造
 
 ### プライマリエージェント
 
-| エージェント | モデル | 役割 |
+| Agent | モデル | 役割 |
 | --- | --- | --- |
-| `orchestrator` | v4-pro | デフォルトエントリポイント：意図ゲーティング（Intent Gate）+ モデル認識ルーティング + フォールバックチェーン |
+| `orchestrator` | v4-pro | デフォルト入口：意図ゲート（Intent Gate）+ モデル認識ルーティング + フォールバックチェーン |
 
 ### サブエージェント
 
-| エージェント | モデル | 権限 | 役割 |
+| Agent | モデル | 権限 | 役割 |
 | --- | --- | --- | --- |
-| `planner` | v4-pro | 読み書き | 計画、アーキテクチャ、タスク分割 |
-| `deep-worker` | v4-pro | 読み書き | 重量級実装、マルチファイル変更、複雑なデバッグ |
-| `oracle` | v4-pro | **読み取り専用** | 根本原因解析、コードの深層理解 |
-| `reviewer` | v4-pro | **読み取り専用** | 二軸コードレビュー（規約 + 仕様）+ 重大度キャリブレーション |
-| `ui-builder` | v4-pro | 読み書き | フロントエンド・UI 関連タスク |
-| `consultant` | v4-pro | 読み書き | 方式検討、ベストプラクティス提案 |
+| `planner` | v4-pro | 読み書き | 計画、アーキテクチャ、タスク分解 |
+| `deep-worker` | v4-pro | 読み書き | 重量級実装、複数ファイル変更、複雑なデバッグ |
+| `oracle` | v4-pro | **読み取り専用** | 根本原因分析、コードの深い理解 |
+| `reviewer` | v4-pro | **読み取り専用** | 二軸コードレビュー（規範 + 規約）+ 深刻度キャリブレーション |
+| `ui-builder` | v4-pro | 読み書き | フロントエンドと UI 関連タスク |
+| `consultant` | v4-pro | 読み書き | 設計案の議論、ベストプラクティス提案 |
 | `explore` | v4-flash | **読み取り専用** | コードベース検索、並列探索 |
 | `librarian` | v4-flash | **読み取り専用** | ドキュメント検索、Web 検索 |
 | `light-orchestrator` | v4-flash | 読み書き | 軽量タスク、単一ファイル編集 |
 
-> `deep-worker` と `light-orchestrator` は「研究禁止・委任禁止」の原則に従う——実行のみ、探索は行わず、コンテキストは orchestrator が提供する。
+> `deep-worker` と `light-orchestrator` は「研究禁止・委任禁止」の原則に従う——実行であって探索ではない。コンテキストは orchestrator が提供する。
 >
-> 読み取り専用エージェント（`oracle`/`reviewer`/`explore`/`librarian`）は真の読み取り専用化：`edit: deny` + bash ホワイトリスト（デフォルト全 deny、`git status/diff/log/show/blame/grep`、`rg` 等の読み取り専用サブコマンドのみ許可；`oracle`/`reviewer` は `/review-pr` の返信投稿をサポートするため `gh pr view/diff`、`gh issue view`、`gh api` も追加で許可）。
+> 読み取り専用エージェント（`oracle`/`reviewer`/`explore`/`librarian`）は真の読み取り専用化：`edit: deny` + bash ホワイトリスト（デフォルト全 deny、`git status/diff/log/show/blame/grep`、`rg` などの読み取り専用サブコマンドのみ許可；`oracle`/`reviewer` はさらに `gh pr view/diff`、`gh issue view`、`gh api` を許可し `/review-pr` の返信をサポート）。
 
 ## ショートカットコマンド
 
-### エージェントルーティングコマンド
+### Agent ルーティングコマンド
 
-| コマンド | エージェント | 用途 |
+| コマンド | Agent | 用途 |
 | --- | --- | --- |
-| `/deep` | `deep-worker` | 重量級実装、マルチファイル変更 |
+| `/deep` | `deep-worker` | 重量級実装、複数ファイル変更 |
 | `/quick` | `light-orchestrator` | 軽量タスク、単一ファイル編集 |
-| `/ui` | `ui-builder` | フロントエンド/UI 作業 |
-| `/review` | `reviewer`（code-review） | 二軸並行レビュー（規約+仕様）+ 重大度キャリブレーション |
-| `/review-pr` | `reviewer`（code-review + gh-cli） | PR レビューと GitHub への返信投稿 |
-| `/plan` | `planner` | 計画立案、技術方式 |
-| `/search` | `librarian` | 外部検索、ドキュメント参照 |
-| `/oracle` | `oracle` | 深層解析、問題の原因特定 |
+| `/ui` | `ui-builder` | フロントエンド / UI 作業 |
+| `/review` | `reviewer`（code-review） | 二軸並列レビュー（規範+規約）+ 深刻度キャリブレーション |
+| `/review-pr` | `reviewer`（code-review + gh-cli） | PR をレビューして GitHub に返信 |
+| `/plan` | `planner` | 計画策定、技術設計 |
+| `/search` | `librarian` | 外部検索、ドキュメント調査 |
+| `/oracle` | `oracle` | 深い分析、問題の追跡 |
 | `/consult` | `consultant` | 相談、比較、提案 |
 
 ### 操作コマンド
 
-| コマンド | エージェント | 用途 |
+| コマンド | Agent | 用途 |
 | --- | --- | --- |
 | `/commit` | `light-orchestrator` | Conventional Commits コミットメッセージ生成（インライン形式） |
-| `/release` | `deep-worker`（git-release） | タグリリース準備 |
-| `/reflect` | `oracle`（reflect） | 摩擦の発見 → 設定最適化の提案 |
-| `/handoff` | `light-orchestrator`（handoff） | セッションを引継ぎドキュメントに圧縮 |
+| `/release` | `deep-worker`（git-release） | Tag リリースの準備 |
+| `/reflect` | `oracle`（reflect） | 摩擦の発見 → 構成最適化の提案 |
+| `/handoff` | `light-orchestrator`（handoff） | セッションを引き継ぎドキュメントに圧縮 |
 
 ### インラインコマンド
 
-| コマンド | エージェント | 用途 |
+| コマンド | Agent | 用途 |
 | --- | --- | --- |
 | `/codemap` | `explore`（codemap） | リポジトリ構造図の生成 |
-| `/simplify` | `oracle`（simplify）→ `light-orchestrator` | oracle の解析 → light-orchestrator が簡略化を適用 |
-| `/rmslop` | `deep-worker`（remove-deadcode） | デッドコードと AI slop のクリーンアップ |
+| `/simplify` | `oracle`（simplify）→ `light-orchestrator` | oracle が分析 → light-orchestrator が簡素化を適用 |
+| `/rmslop` | `deep-worker`（remove-deadcode） | 死にコードと AI slop の削除 |
 
-### 仕様駆動コマンド
+### 規約コマンド
 
-| コマンド | エージェント | 用途 |
+| コマンド | Agent | 用途 |
 | --- | --- | --- |
 | `/spec-propose` | `planner`（spec-workflow） | コード探索 → 変更提案の起草 |
-| `/spec-apply` | `deep-worker`（spec-workflow） | tasks.md に従い逐次実装 → 自動アーカイブ |
+| `/spec-apply` | `deep-worker`（spec-workflow） | tasks.md に沿って逐次実装 → 自動アーカイブ |
 
 ## スキル（Skills）
 
-OpenCode はネイティブ `skill` ツールを通じてスキルをオンデマンドで公開する——エージェントは必要な時だけ読み込み、コンテキストを占有しない。
+OpenCode はネイティブの `skill` ツールでスキルをオンデマンド公開する——エージェントは必要な時だけ読み込み、コンテキストを占有しません。
 
-| スキル | 役割 |
+| Skill | 役割 |
 | --- | --- |
-| `code-review` | トークン節約型の多次元コードレビュー：次元別+重大度別の段階報告、一致点には最高信頼度を付与、勝手にコードを書き換えない |
-| `codemap` | 注釈付きリポジトリ構造図の生成、素早いオリエンテーション、探索トークンの節約 |
+| `code-review` | トークン節約型の多次元コードレビュー：次元+深刻度で等級付け報告、一致点に最高確信度を付与、deepreview 自己反証、勝手にコードを書き換えない |
+| `codemap` | 注釈付きリポジトリ構造図を生成、迅速な方向づけ、探索トークンの節約 |
 | `gh-cli` | GitHub CLI v2.97+ リファレンス：ページネーション、リポジトリ特定、discussions/projects/rulesets/skills、rate limit、gh-aw agentic CI、gh api フォールバック |
 | `git-master` | 高度な Git 操作：rebase、squash、fixup、bisect、reflog、コード考古学、worktree |
-| `git-release` | タグリリース：リリースノート、SemVer 推論、gh release コマンド |
-| `resolving-merge-conflicts` | マージコンフリクトを hunk ごとに解決：元の意図を追跡、新しい動作を発明しない、--abort は絶対に使用しない |
-| `handoff` | セッションを引継ぎドキュメントに圧縮（パス参照、内容コピーなし） |
-| `opencode-config` | 本リポジトリの OpenCode 設定の作成と保守（agents/skills/commands/permissions） |
-| `reflect` | 継続的改善：摩擦の発見 → 最小限で保守可能な修正を提案 |
-| `remove-deadcode` | デッドコードの安全な検索と削除、削除前にツールチェーン/LSP で検証 |
-| `security-review` | マージ前セキュリティレビュー（インジェクション/XSS/SSRF/秘密鍵/デシリアライゼーション/パストラバーサル）、報告のみで修正しない |
-| `shared-language` | ドメイン用語集（CONTEXT.md）の構築、トークンの大幅節約 |
-| `simplify` | 振る舞いを保持したコード簡略化（oracle の解析 → 適用） |
-| `spec-workflow` | 軽量仕様駆動変更：proposal → specs → design → tasks → archive |
-| `verification-planning` | 実装前に最も狭い検証パスを計画 |
+| `git-release` | Tag リリース：リリースノート、SemVer 推論、gh release コマンド |
+| `resolving-merge-conflicts` | ハンク単位のマージコンフリクト解決：本来の意図を追跡、新たな挙動を発明しない、--abort を絶対に使わない |
+| `handoff` | セッションを引き継ぎドキュメントに圧縮（パス参照、内容のコピーなし） |
+| `opencode-config` | 本リポジトリの OpenCode 設定（agents/skills/commands/permissions）の作成と保守 |
+| `reflect` | 継続的改善：摩擦の発見 → 最小限で保守可能な修正の提案 |
+| `remove-deadcode` | 死にコードを安全に検出・削除、削除前にツールチェーン/LSP で検証 |
+| `security-review` | マージ前のセキュリティレビュー（インジェクション/XSS/SSRF/シークレット/デシリアライゼーション/パストラバーサル）、報告のみで修正しない |
+| `shared-language` | ドメイン用語集（CONTEXT.md）の構築、大幅なトークン節約 |
+| `simplify` | 挙動を保持するコード簡素化（oracle 分析 → 適用） |
+| `spec-workflow` | 軽量な規約駆動の変更：proposal → specs → design → tasks → archive |
+| `verification-planning` | 実装前に最狭の検証パスを計画 |
 | `verify-with-docs` | コーディング前に API ドキュメントを照合、検索優先、幻覚防止 |
-| `grilling` | 要件アラインメントインタビュー：一問ずつ、多肢選択優先、曖昧さが収束してから着手 |
-| `tech-debt-audit` | 9 次元の技術的負債監査（デッドコード/重複/命名ドリフト/複雑性/依存/エラー処理/テスト/ドキュメント/セキュリティ）、読み取り専用の報告でコード修正はしない |
+| `grilling` | 要件整理インタビュー：一問ずつ、多肢選択を優先、曖昧さが収束してから着手 |
+| `tech-debt-audit` | 9 次元の技術的負債監査（死にコード/重複/命名ドリフト/複雑度/依存関係/エラーハンドリング/テスト/ドキュメント/セキュリティ）、読み取り専用報告でコードは変更しない |
+| `wait-what` | ユーザーメッセージが分かりにくいとき、まず一文で言い換えて確認してから着手 |
+| `writing-for-agents` | エージェント向けドキュメント（skill/AGENTS.md/ポインタドキュメント）を書くためのレバレッジ |
+| `to-questionnaire` | オフチャネルの一回限りアンケート（非同期記入）、リアルタイムインタビューの grilling とは別物 |
+| `research` | 開かれた課題の深い調査、引用付き Markdown を生成、単点照合の verify-with-docs とは別物 |
+| `wizard` | 人手によるステップバイステップウィザード（bash スクリプト、`bash -n` 検証）、人間にしかできないステップへ誘導 |
 
-## 設計判断とイテレーション記録
+## 設計判断と反復記録
 
-中核となる考え方は [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent)（意図ゲーティング、読み取り専用分離、アンチパターン）、[oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim)（スケジューラー優先、フォールバックチェーン、拒否契約、プロンプトキャッシュ安全、impact×confidence÷cost）、[anomalyco/opencode](https://github.com/anomalyco/opencode)（設定スキーマ、スキル体系）、[cli/cli](https://github.com/cli/cli)（gh v2.97 コマンドセット、rate limit、gh-aw）、[OpenSpec](https://github.com/Fission-AI/OpenSpec)（delta specs、OPSX アクションフロー update/verify/四つの問い）、[mattpocock/skills](https://github.com/mattpocock/skills)（コンフリクト解決規律、引継ぎドキュメント）、[pi](https://github.com/earendil-works/pi)（先に回答し後から編集、簡潔な応答、独立セッションでのコンテキスト収集）、[deepreview](https://github.com/mechanai/deepreview)（novelty 分類収束、実効サイズルーティング、Points of Agreement）の長所を参考にし、純粋な設定で実現、追加依存ゼロである。
+コア思想は [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent)（意図ゲート、読み取り専用分離、アンチパターン）、[oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim)（スケジューラ優先、フォールバックチェーン、拒否契約、プロンプトキャッシュ安全、impact×confidence÷cost）、[anomalyco/opencode](https://github.com/anomalyco/opencode)（設定スキーマ、スキル体系）、[cli/cli](https://github.com/cli/cli)（gh v2.97 コマンドセット、rate limit、gh-aw）、[OpenSpec](https://github.com/Fission-AI/OpenSpec)（delta specs、OPSX アクションフロー update/verify/四つの問い）、[mattpocock/skills](https://github.com/mattpocock/skills)（コンフリクト解決規律、引き継ぎドキュメント）、[pi](https://github.com/earendil-works/pi)（先に答えてから変更、簡潔な応答、独立セッション収集）、[deepreview](https://github.com/mechanai/deepreview)（novelty 分類の収束、有効サイズルーティング、Points of Agreement）の長所を取り入れ、純粋な設定で実現し、追加の依存関係ゼロ。
 
-> **参考であって模倣ではない**：過重なパイプラインからは軽量設計理念のみを抽出。冗長機能は既存の agents/skills でカバーし、新規追加は行わない。「削減を追加より優先」の原則に従い、各イテレーションでトークンの純減を目標とする。
+> **借用であって丸写しではない**：重すぎるパイプラインからは軽量化の設計理念だけを吸収し、冗長な機能は既存の agents/skills でカバーして新設しない。「追加より簡素化」の原則に従い、各反復でトークンの純減を目標とする。
 >
-> **本ラウンド（v27）のメカニズム出典**：OPSX アクションフロー（update/verify/四つの問い）を spec-workflow に内化；独立セッションでのコンテキスト収集、プロンプトキャッシュ安全（静的プレフィックスの安定化、変動しやすい内容はペイロード末尾に配置）は pi と oh-my-opencode-slim から参考；impact×confidence÷cost によるイテレーション関門は deep-worker へ導入；Points of Agreement（一致点に最高信頼度を付与）は deepreview から参考；gh-cli に rate limit と gh-aw を cli/cli v2.97 から増補。
+> **今ラウンド（v28）の仕組みの出典**：DeepSeek キャッシュ+thinking 規律、scope-first+委任優先、原子的 TODO を AGENTS.md に集約；5 スキル新設（wait-what/writing-for-agents/to-questionnaire/research/wizard）で計 23 個；gh-cli に GHSA セキュリティ項目を 4 件追加；code-review に deepreview の自己反証を統合；.ai/calibration.yml を削除（キャリブレーション規則は code-review にインライン化）。
 >
-> **評価後に不採用**：mattpocock/skills の段階的開示と wait-what（既存スキルの遅延読み込みがその価値をカバー済み）；superpowers は設定ノブがないため、プラグイン文字列形式での注入を維持。
+> **評価後に不採用**：mattpocock/skills のその他のプロセス系スキル（code-review、tdd、implement などは superpowers／既存スキルと重複）；superpowers には設定ノブがないため、プラグイン文字列形式での注入を維持。
 
-### イテレーションマイルストーン
+### 反復マイルストーン
 
-v1 から 27 回のイテレーションを経て、継続的にアップストリームリポジトリのベストプラクティスに整合：
+v1 以来 28 回の反復を重ね、継続的に上流リポジトリのベストプラクティスをベンチマークしてきました：
 
-- **v1-v7（基盤）**：デュアルモデルバインディング、エージェントロール体系、意図ゲートルーティング、AGENTS.md グローバルルール、Skills ディレクトリ、権限ベースライン
-- **v8-v15（レビュー+仕様+契約）**：code-review 二軸キャリブレーション、spec-workflow、gh-cli 整合、拒否契約、バックグラウンド検証
-- **v16-v22（継続的スリム化）**：コマンド 29→18（-38%）、AGENTS.md 290→211（-27%）、文ごとの no-op トリミング、Schema 検証による死キー削除
-- **v23-v25（整合+セキュリティ）**：6 つのアップストリームリポジトリを統合、gh-cli v2.97 エスケープインジェクションのセキュリティ章、procedure-driven プロンプトの精緻化、DCP ウィンドウチューニング
-- **v26（今回のスリム化）**：prune:true と tool_output 800/20480 の引き締め、DCP を 60%/30% パーセント閾値へ切替、grilling を導入し writing-great-skills を置換、opencode-config 131→64 にスリム化、code-review の段階化+validator、gh-cli に gh status を追加、AGENTS.md に User Override を追加、orchestrator の委任コスト規律、7 つのエージェントファイルで正味 22 行削減
-- **v27（削除/移行/新規）**：batch_tool の死設定を削除、読み取り専用エージェントの無効な `write: deny` を削除、bash の冗長 3 行を削除；Context Management 節を orchestrator 専用サブセクションへ移行；読み取り専用エージェントの bash ホワイトリストを追加、read に `.env` を追加；tech-debt-audit スキルを新規追加；15 個のスキル description を 30-40% スリム化；gh-cli に rate limit/gh skill ホスト/gh-aw 等 5 点を増補、code-review に Points of Agreement を追加、spec-workflow に update の二つの問いを追加、orchestrator に独立セッション収集+プロンプトキャッシュ安全を追加、deep-worker に impact×confidence÷cost を追加
+- **v1-v7（基礎固め）**：デュアルモデルバインド、Agent ロール体系、意図ゲートルーティング、AGENTS.md グローバルルール、Skills ディレクトリ、権限ベースライン
+- **v8-v15（レビュー+規約+契約）**：code-review 二軸キャリブレーション、spec-workflow、gh-cli 整合、拒否契約、バックグラウンド検証
+- **v16-v22（継続的スリム化）**：コマンド 29→18（-38%）、AGENTS.md 290→211（-27%）、一文単位の no-op 剪定、スキーマ検証による死にキー削除
+- **v23-v25（整合+セキュリティ）**：上流 6 リポジトリの統合、gh-cli v2.97 エスケープインジェクション安全セクション、procedure-driven プロンプト精緻化、DCP ウィンドウ調整
+- **v26（本ラウンドのスリム化）**：prune:true と tool_output 800/20480 の引き締め、DCP を 60%/30% のパーセント閾値に切り替え、writing-great-skills の代わりに grilling を導入、opencode-config を 131→64 に削減、code-review の等級化+validator、gh-cli に gh status を追加、AGENTS.md に User Override を追加、orchestrator の委任コスト規律、7 つの agent ファイルで正味 22 行削減
+- **v27（削除/移行/新設）**：batch_tool の死に設定を削除、読み取り専用エージェントの無効な `write: deny`、bash の冗長 3 行を削除；Context Management セクションを orchestrator 専用サブセクションへ移行；読み取り専用エージェントの bash ホワイトリスト、read に `.env` を追加；tech-debt-audit スキルを新設；15 スキルの description を 30-40% スリム化；gh-cli に rate limit/gh skill ホスト/gh-aw など 5 点を追加、code-review に Points of Agreement を追加、spec-workflow に update の二問を追加、orchestrator に独立セッション収集+プロンプトキャッシュ安全を追加、deep-worker に impact×confidence÷cost を追加
+- **v28（規律の再構築）**：キャッシュ+thinking 規律、scope-first+委任優先、原子的 TODO を AGENTS.md に集約；5 スキル新設で計 23 個；gh-cli に GHSA 4 件追加；code-review に deepreview の自己反証を統合；.ai/calibration.yml を削除（規則は code-review にインライン化）；README 十言語同期
 
 ## リポジトリ構造
 
 ```text
 ├── opencode/                     # OpenCode 設定ディレクトリ（独立デプロイ可能）
-│   ├── .ai/
-│   │   └── calibration.yml       # code-review 重大度キャリブレーション
 │   ├── agents/                   # 10 個の専任エージェント
-│   │   ├── orchestrator.md       # メインエントリ：意図ゲーティング + モデル認識ルーティング
+│   │   ├── orchestrator.md       # 主入口：意図ゲート + モデル認識ルーティング
 │   │   ├── planner.md            # pro：アーキテクチャと計画
 │   │   ├── deep-worker.md        # pro：重量級実装
-│   │   ├── oracle.md             # pro：深層コード解析（読み取り専用）
+│   │   ├── oracle.md             # pro：深いコード分析（読み取り専用）
 │   │   ├── reviewer.md           # pro：二軸コードレビュー（読み取り専用）
-│   │   ├── consultant.md         # pro：方式検討と提案
+│   │   ├── consultant.md         # pro：設計案の議論と提案
 │   │   ├── ui-builder.md         # pro：フロントエンドと UI
 │   │   ├── explore.md            # flash：コードベース検索（読み取り専用）
 │   │   ├── librarian.md          # flash：外部検索（読み取り専用）
-│   │   └── light-orchestrator.md # flash：単純編集
-│   ├── skills/                   # 18 個のオンデマンドスキル
-│   │   ├── code-review/          # 二軸並行レビュー + 重大度キャリブレーション
+│   │   └── light-orchestrator.md # flash：単純な編集
+│   ├── skills/                   # 23 個のオンデマンドスキル
+│   │   ├── code-review/          # 二軸並列レビュー + 深刻度キャリブレーション
 │   │   ├── codemap/              # リポジトリ構造図の生成
-│   │   ├── gh-cli/               # GitHub CLI v2.97+ リファレンス + セキュリティ警告
+│   │   ├── gh-cli/               # GitHub CLI v2.97+ リファレンス + 安全警告
 │   │   ├── git-master/           # 高度な Git 操作
-│   │   ├── git-release/          # タグリリース
-│   │   ├── handoff/              # セッションを引継ぎドキュメントに圧縮
-│   │   ├── opencode-config/      # メタスキル：本リポジトリ設定の作成
+│   │   ├── git-release/          # Tag リリース
+│   │   ├── handoff/              # セッションを引き継ぎドキュメントに圧縮
+│   │   ├── opencode-config/      # メタスキル：本リポジトリの設定作成
 │   │   ├── reflect/              # 継続的改善
-│   │   ├── remove-deadcode/      # デッドコード検出と削除
-│   │   ├── resolving-merge-conflicts/ # hunk ごとのコンフリクト解決規律
+│   │   ├── remove-deadcode/      # 死にコードの検出と削除
+│   │   ├── resolving-merge-conflicts/ # ハンク単位のコンフリクト解決規律
 │   │   ├── security-review/      # セキュリティレビューチェックリスト
 │   │   ├── shared-language/      # ドメイン用語集（トークン節約）
-│   │   ├── simplify/             # 振る舞いを保持したコード簡略化
-│   │   ├── spec-workflow/        # 仕様駆動開発
-│   │   ├── tech-debt-audit/      # 技術的負債監査（9 次元、読み取り専用の報告）
-│   │   ├── verification-planning/ # 実装前検証パス計画
-│   │   ├── verify-with-docs/     # 検索優先 API 検証
-│   │   └── grilling/             # 要件アラインメントインタビュー
-│   ├── opencode.jsonc            # メイン設定（18 コマンド）
+│   │   ├── simplify/             # 挙動を保持するコード簡素化
+│   │   ├── spec-workflow/        # 規約駆動開発
+│   │   ├── tech-debt-audit/      # 技術的負債監査（9 次元、読み取り専用報告）
+│   │   ├── verification-planning/ # 実装前の検証パス計画
+│   │   ├── verify-with-docs/     # 検索優先の API 検証
+│   │   ├── grilling/             # 要件整理インタビュー
+│   │   ├── research/             # 開かれた課題の深い調査（引用付き）
+│   │   ├── to-questionnaire/     # オフチャネルの一回限りアンケート
+│   │   ├── wait-what/            # 分かりにくいメッセージは一文で言い換えて確認
+│   │   ├── wizard/               # 人手によるステップバイステップウィザード（bash -n 検証）
+│   │   └── writing-for-agents/   # エージェント向けドキュメント作成
+│   ├── opencode.jsonc            # 主設定（18 コマンド）
 │   ├── AGENTS.md                 # グローバルルール
 │   └── dcp.jsonc                 # DCP コンテキスト圧縮（DeepSeek 128K、60%/30% パーセント閾値）
 ├── README.md
@@ -299,35 +307,35 @@ v1 から 27 回のイテレーションを経て、継続的にアップスト�
 
 ## 利用ガイド
 
-### モード一：Orchestrator 自動ルーティング（デフォルト）
+### モード 1：Orchestrator 自動ルーティング（デフォルト）
 
-自然言語で要件を記述すると、Orchestrator が自動的に意図を分析し、最適なエージェントとモデルを選択して実行する。
+自然言語で要件を記述すると、Orchestrator が自動的に意図を分析し、最適なエージェントとモデルを選択して実行します。
 
 ```text
-「このログイン API のエラーを調査して」        → oracle が根本原因を解析 → 診断レポートを返却
-「このループ、パフォーマンスが悪すぎるから最適化して」 → oracle が解析 → deep-worker が最適化を実施
-「この PR をレビューして」                      → reviewer が多面的にレビュー → 段階別レポートを返却
-「ユーザーモジュールにエクスポート機能を追加したい」   → planner が方式を策定 → deep-worker が実装
-「React 19 の use() API の使い方は？」          → librarian がドキュメントを検索 → シグネチャと例を返却
+「このログイン API のエラーを調べてほしい」     → oracle が根本原因を分析 → 診断レポートを返す
+「このループを最適化して、性能がひどすぎる」     → oracle が分析 → deep-worker が最適化を実装
+「この PR をレビューしてほしい」               → reviewer が多次元レビュー → 等級付きレポートを返す
+「ユーザーモジュールにエクスポート機能を追加したい」 → planner が計画を策定 → deep-worker が実装
+「React 19 の use() API の使い方は？」        → librarian がドキュメントを調査 → シグネチャと例を返す
 ```
 
-### モード二：コマンドエイリアス直接指定
+### モード 2：コマンドエイリアスで直接アクセス
 
 | シナリオ | コマンド |
 | --- | --- |
-| 複雑な実装 / マルチファイル変更 | `/deep` |
-| 軽量な変更 / 単一ファイル編集 | `/quick` |
-| 技術方式の策定 / アーキテクチャ設計 | `/plan` |
-| バグ調査 / 深層解析 | `/oracle` |
+| 複雑な実装 / 複数ファイル変更 | `/deep` |
+| 軽量な修正 / 単一ファイル編集 | `/quick` |
+| 技術設計 / アーキテクチャ設計 | `/plan` |
+| バグ調査 / 深い分析 | `/oracle` |
 | コードレビュー | `/review` |
-| 外部検索 / API 検索 | `/search` |
+| 外部検索 / API 調査 | `/search` |
 | フロントエンド / UI 作業 | `/ui` |
-| 方式検討 / 比較とトレードオフ | `/consult` |
+| 設計案の議論 / 比較と取捨選択 | `/consult` |
 | 構造化デバッグ | `/oracle` |
 
 ### 典型的なワークフロー
 
-**新機能開発（仕様駆動）：**
+**新機能の開発（規約駆動）：**
 ```text
 /spec-propose  → /spec-apply  → /review
 ```
@@ -340,14 +348,17 @@ v1 から 27 回のイテレーションを経て、継続的にアップスト�
 **コードレビュー：**
 ```text
 /review-pr   ← PR レビュー + 自動返信
-/review      ← 二軸並行レビュー
+/review      ← 二軸並列レビュー
 ```
 
-## 設計哲学
+## 設計思想
 
-- **純粋設定駆動、追加依存ゼロ** —— 全機能は `opencode.jsonc` + `agents/*.md` + `skills/*/SKILL.md` + `AGENTS.md` で実現
-- **DeepSeek V4 デュアルモデルを極限まで活用** —— Pro は推論と意思決定、Flash は検索と軽量実行
-- **トークン効率を最優先** —— パス参照でファイル貼り付けを代替、スキルはオンデマンド読み込み、圧縮は階層管理
-- **プラグインは增效するが主役を奪わない** —— superpowers はプロセス規律を提供、DCP はインテリジェント圧縮で単純な切り捨てを代替（パーセント閾値で自己適応、ネイティブ compaction でフォールバック）
-- **実行と探索の分離** —— deep-worker/light-orchestrator は研究/委任禁止、explore/librarian は変更禁止
-- **継続的改善** —— reflect による摩擦の機構的発見、code-review の二軸キャリブレーションが品質を保証
+- **純粋な設定駆動、追加の依存関係ゼロ** —— すべての能力は `opencode.jsonc` + `agents/*.md` + `skills/*/SKILL.md` + `AGENTS.md` で実現
+- **DeepSeek V4 デュアルモデルの徹底活用** —— Pro は推論と意思決定、Flash は照会と軽量実行
+- **トークン効率最優先** —— パス参照によるファイル貼り付けの代替、スキルのオンデマンド読み込み、圧縮の階層管理
+- **プラグインは効果を高めつつ主役を奪わない** —— superpowers はプロセス規律を提供し、DCP（dcp.jsonc）は能動的な重複排除+圧縮閾値、内蔵 compaction（opencode.jsonc）は自動トリガー+prune の後始末
+- **実行と探索の分離** —— deep-worker/light-orchestrator は研究・委任を禁止、explore/librarian は変更を禁止
+- **キャッシュと thinking の規律** —— 静的プレフィックスを安定させ DeepSeek プロンプトキャッシュにヒットさせる；コーディングタスクは温度 0；thinking は推論タスクのみ有効化し、単純・検索タスクでは無効化
+- **Scope First + Delegate Always** —— まず範囲を定め（2 ステップ以上/複数ファイル/アーキテクチャ変更はまず planner）、それから実行を委任。トップレベルのトークンはルーティングと難題だけに残す
+- **原子的 TODO** —— 複数ステップのタスクはまず順序付き TODO を書き、1 件ずつ in_progress→completed；形式は `path: action for scenario — verify by check`
+- **継続的改善** —— reflect が摩擦を機構的に発見、code-review の二軸キャリブレーションが品質を保証

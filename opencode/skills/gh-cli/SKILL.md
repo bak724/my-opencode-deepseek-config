@@ -35,6 +35,22 @@ exfiltration) when output is rendered to a terminal:
 - When fetching issues/PRs/comments from untrusted repos, prefer `--json` over
   human-readable output — JSON is not vulnerable to escape injection.
 
+## Security Advisory — v2.96.0 / v2.97.0 fixes
+
+Beyond the escape-sequence fixes above, these advisories (fixed in v2.96.0 and
+v2.97.0) change agent behavior. Each entry: advisory → impact → agent rule.
+
+| Advisory | Impact | Agent rule |
+|---|---|---|
+| GHSA-cg6r-mpgc-h9mm | `gh auth status` (without `--show-token`) prints a token fragment for `github_pat_*` / `ghs_*` / `ghu_*` and the Actions `GITHUB_TOKEN`; classic `gho_*` / `ghp_*` are unaffected. | Upgrade ≥2.97.0; redact the token line before sharing output; never ship this output to CI logs. |
+| GHSA-mm27-mwq9-fr5g | `gh attestation verify --signer-repo/--signer-workflow` interpolates the value into a regex without escaping metacharacters (`.` matches any char), so a lookalike name can satisfy a matcher intended for a trusted signer. | Only safe on ≥2.97.0; else use `--repo`/`--owner` (exact string match) or manually verify the SAN. |
+| GHSA-4fjg-2h4q-fwg3 | Some REST request URLs built without escaping variable path segments → path traversal; a crafted name redirects `gh` to a different resource than intended. | Upgrade 2.97.0; be cautious with untrusted repo/input names. |
+| GHSA-8cg3-r6g9-fpg2 | `gh codespace jupyter` opens the codespace-supplied URL unvalidated; a malicious codespace returns a `vscode://` link → command execution on the host. A variant of GHSA-p2h2-3vg9-4p87 (CVE-2024-52308), which covered `codespace ssh`/`logs` but not Jupyter. | Upgrade ≥2.96.0; only use trusted codespaces (trusted sources + default/prebuilt devcontainers). |
+
+**Not an advisory — `gh skill install` (v2.95+):** when run non-interactively,
+pass `--agent opencode` explicitly — the default is `github-copilot`, which
+installs to the wrong host. Add `--scope user` to share skills globally.
+
 ## Interactivity policy
 
 `gh` does the right thing in non-TTY contexts: skips the pager, strips ANSI

@@ -48,6 +48,8 @@ You run on v4-flash — fast, cheap. Preferred for search, lookup, and documenta
 ```
 
 ## Rules
+- Follow AGENTS.md cache and scope discipline (Cache & Thinking / Scope First + Delegate Always).
+- For deep cited research, reference the research skill.
 - Always cite sources with URLs
 - Prefer official documentation over tutorials
 - If documentation is unclear or missing, say so explicitly

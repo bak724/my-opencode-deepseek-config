@@ -62,3 +62,4 @@ Launch multiple search tools simultaneously for independent queries. Use the rig
 - Address the actual need, not just the literal request
 - If a search is too broad (>10 results), suggest narrowing rather than returning an overwhelming list
 - Follow AGENTS.md — especially Parallelize, and Read Before You Write
+- Follow AGENTS.md cache and scope discipline (Cache & Thinking / Scope First + Delegate Always).

@@ -1,9 +1,8 @@
 # Global Operating Rules
 
-These rules apply to **every** agent in this configuration. OpenCode loads this
-file automatically as shared context, so individual `agents/*.md` prompts only
-need to describe what is unique to each role. When an agent prompt and this file
-overlap, follow the stricter instruction.
+These rules apply to every agent in this configuration and load automatically
+as shared context; `agents/*.md` only add what is unique to each role. When
+prompts overlap, follow the stricter instruction.
 
 For agent routing, model tier reference, and fallback chains, see the
 orchestrator prompt (`agents/orchestrator.md`).
@@ -35,13 +34,30 @@ orchestrator prompt (`agents/orchestrator.md`).
 10. **Be concise.** Keep answers short and direct. No fluff, no cheerful filler,
     no unnecessary preamble. Technical prose only.
 
+## DeepSeek Cache & Thinking Discipline
+
+- **Byte-stable prefix.** Agent prompts, AGENTS.md, rule order stay byte-
+  identical; early reorders bust the prefix cache and re-pay full input cost.
+  Append volatile content (timestamps, random IDs, dynamic file lists) near
+  the END of the payload, never the head.
+- **Freeze toolsets.** Never reorder tool schemas or injected rules mid-session.
+- **Temperature.** Coding tasks: 0; with thinking on, don't set temperature/top_p (silently ignored).
+- **Thinking.** Off for simple/retrieval tasks (flash saves the most output
+  tokens); on for complex multi-step agent tasks.
+- **reasoning_content** must round-trip on tool calls (opencode handles it); never reorder messages in ways that break it.
+
+## Scope First + Delegate Always
+
+- **Size the scope first.** 2+ steps, multi-file, or architectural changes require `planner` first — never go straight to implementation.
+- **BACKGROUND FIRST.** Independent subtasks dispatch in parallel, background.
+- **Delegate, don't do.** Delegate whenever delegation overhead is smaller than the task; top-level tokens go only to routing and hard problems.
+- **Pass the explicit `task_id`** when resuming a subagent session.
+- **Reference paths, don't paste files.** Point at `src/app.ts:42`.
+
 ## Language
 
-Reply to the user in the operating system's current locale language. All
-agents should detect the OS language from the environment and use it for
-all user-facing output — explanations, summaries, questions, and findings.
-On a zh-CN Windows system, reply in Chinese. On an en-US system, reply in
-English. Never force English unless the user explicitly requests it.
+Reply to the user in the OS locale language (detect from environment). On a
+zh-CN Windows system, Chinese; en-US, English. Never force English unless asked.
 
 ## Constraints (this repository)
 
@@ -53,14 +69,12 @@ English. Never force English unless the user explicitly requests it.
 ## Multi-Step Task Discipline
 
 For any task with 2 or more steps:
-
 1. Write an ordered todo list before starting.
 2. Keep exactly one item `in_progress` at a time.
 3. Mark each item `completed` immediately after finishing it — never batch.
 4. Update the list when scope changes.
-
-Skipping todos on multi-step work means invisible progress and risks leaving the
-task half-done.
+- **Atomic TODO format.** `path: <action> for <scenario> — verify by <check>`
+  (WHERE/WHY/HOW/VERIFY in one line).
 - **Background task hygiene.** Track task IDs and file ownership for every
   parallel dispatch. Never act on assumptions about a background task's result
   before it returns. Overlapping writers on the same file corrupt output.
@@ -77,17 +91,15 @@ task half-done.
 
 ## Task Rejection Contract
 
-Refusing the wrong task early is cheaper than half-doing it. Any agent **must
-stop and return a plain-text rejection** (not a partial attempt) when:
+Refusing the wrong task early is cheaper than half-doing it. Stop and return a plain-text rejection (not a partial attempt) when:
 
-- The task falls outside the agent's role (a read-only agent asked to edit; an
-  executor asked to research or delegate).
+- The task falls outside the agent's role (read-only agent asked to edit, executor asked to research or delegate).
 - Required context is missing and cannot be safely inferred (which file, what
   error, what scope) — ask instead of guessing.
 - The task needs a more capable agent — name the escalation target and why.
 
-Keep the rejection one or two sentences: what you won't do, why, and the right
-next step. Do not apologize, pad, or attempt a degraded version anyway.
+Keep it short: what you won't do, why, the right next step — no apologies, no
+padding, no degraded partial attempt.
 
 ## When to Ask vs. Proceed
 
@@ -95,22 +107,15 @@ Ask for clarification only when:
 
 - There are multiple interpretations with significantly different effort/impact, or
 - Critical context is missing (which file, what error, what scope).
-
 Otherwise pick the best default, state the assumption you made, and proceed.
-
 Ask using the grilling skill's format (one question at a time, prefer multiple choice).
 
-## Challenging the User
-
-If a requested approach will clearly cause problems or contradicts established
-patterns, say so before executing:
+If a requested approach will clearly cause problems or contradict established patterns, say so before executing:
 
 > I notice [observation]. This may cause [problem] because [reason].
 > Alternative: [suggestion]. Proceed as requested, or try the alternative?
 
-## User Override
-
-If a user instruction conflicts with these rules, confirm with the user before executing — the user's explicit request wins, but only after it is acknowledged as an override.
+If a user instruction conflicts with these rules, confirm first — the user's explicit request wins, but only after it is acknowledged as an override.
 
 ## Anti-Patterns (Blocking)
 
@@ -122,7 +127,6 @@ These are unconditionally forbidden:
 - **No empty catch blocks** (`catch(e) {}`). If an error is truly ignorable, comment why.
 - **No `@ts-ignore` or `@ts-expect-error`** without a comment explaining why it's necessary and when it can be removed.
 - **No commented-out code.** Dead code belongs in git history, not the source file.
-- **No file creation unless asked** (see Core Principle #6).
 
 ## Quality Bar
 
@@ -131,30 +135,29 @@ These are unconditionally forbidden:
 - Cite concrete locations (`file:line`) when reporting findings.
 - Every public function/method needs at least one caller before commit — no
   dead code.
-- **Self-skepticism before output.** Before reporting a finding or claiming
-  completion, ask: "Could I disprove this? Is the severity proportionate? Would
-  I stake my own review on this?" Surface only what survives your own scrutiny.
+- **Self-skepticism before output.** Before reporting or claiming completion,
+  ask: could I disprove this? Is the severity proportionate? Surface only what
+  survives your own scrutiny.
 
 ## Comment Discipline
 
-- Comments explain WHY, not WHAT. If the code already says what it does, delete
-  the comment — no AI boilerplate.
+- Comments explain WHY, not WHAT — if the code already says it, delete it.
 - No filler docstrings. Match the project's docstring convention; if it uses
   none, add none.
 
 ## Code Style (when implementing)
 
-- **Prefer `const` over `let`;** early return instead of `else`.
-- **Prefer functional array methods** (`flatMap`, `filter`, `map`) over imperative loops.
-- **No import aliases** unless disambiguating a collision; no wildcard imports (`import * as`).
+- **Prefer `const` over `let`;** early return instead of `else`; functional
+  array methods (`flatMap`, `filter`, `map`) over imperative loops.
+- **No import aliases** unless disambiguating a collision; no wildcard imports.
 - **Inline single-use values.** Don't name a value used exactly once.
 
 ## Skills
 
-Skills live under `skills/<name>/SKILL.md` and load on demand via the `skill`
-tool. Before reinventing a workflow, check whether a skill covers it. The
-`superpowers` plugin adds process-oriented skills (brainstorming, systematic
-debugging, TDD) — prefer these before falling back to raw reasoning.
+Skills live under `skills/<name>/SKILL.md` and load on demand. Before
+reinventing a workflow, check whether a skill covers it. The `superpowers`
+plugin adds process skills (brainstorming, systematic debugging, TDD) —
+prefer those before raw reasoning.
 
 ## Self-Verification
 
@@ -164,17 +167,14 @@ Before claiming any task complete:
 2. Grep for broken callers of any function you changed.
 3. Run tests if they exist; otherwise state what manual verification you did.
 
-Never claim "done" without evidence — a passing build, a clean lint, an
-end-to-end read, or a grep showing no broken callers. Evidence precedes
-assertion.
+Evidence precedes assertion — a passing build, clean lint, end-to-end read, or
+a grep showing no broken callers.
 
 ## Plugins
 
-- **superpowers** (obra/superpowers) — process-oriented skills (brainstorming,
-  systematic debugging, TDD). Its `using-superpowers` bootstrap auto-injects
-  every session and enforces skill-first discipline: invoke the relevant skill
-  before responding.
+- **superpowers** (obra/superpowers) — process skills (brainstorming,
+  systematic debugging, TDD); its `using-superpowers` bootstrap enforces
+  skill-first discipline: invoke the relevant skill before responding.
 - **DCP** (`@tarquinen/opencode-dcp`) — autonomous context pruning and
   deduplication. Compress when a task phase closes; subagent results survive
-  pruning. Tuned in `dcp.jsonc` (the $schema URL is authoritative; @latest +
-  autoUpdate follow plugin releases).
+  pruning. Tuned in `dcp.jsonc`.

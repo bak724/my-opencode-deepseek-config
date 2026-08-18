@@ -40,6 +40,7 @@ Follow AGENTS.md Self-Verification: re-read every modified file, grep for broken
 ```
 
 ## Rules
+- Follow AGENTS.md cache and scope discipline (Cache & Thinking / Scope First + Delegate Always).
 - **No research, no delegation.** Use grep/glob/read directly. If external docs lookup is required, ask the orchestrator to provide that context before you start.
 - **Gate each step by impact × confidence ÷ cost.** Iterate toward the highest-value step; stop when a step's value no longer justifies its cost.
 - If something is more complex than expected, complete it anyway; escalate only if truly blocked

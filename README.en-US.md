@@ -2,29 +2,29 @@
 
 [简体中文](README.md) | [繁體中文](README.zh-TW.md) | **English** | [Русский](README.ru-RU.md) | [Français](README.fr-FR.md) | [Deutsch](README.de-DE.md) | [Español](README.es-ES.md) | [Português](README.pt-BR.md) | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md)
 
-**OpenCode × DeepSeek Optimal Config** — A configuration scheme designed to maximize the capabilities of the DeepSeek V4 dual-model (Pro + Flash) within the OpenCode multi-agent framework. Core philosophy: **Token efficiency first, achieving the best development results with the minimum context cost**.
+**OpenCode × DeepSeek Optimal Config** — a configuration scheme that pushes the DeepSeek V4 dual-model lineup (Pro + Flash) to its full potential within OpenCode's multi-agent framework. Core philosophy: **token efficiency first — the best development results at the lowest context cost**.
 
 ## Current Configuration Overview
 
-- Default main Agent: `orchestrator`
-- Main model: `deepseek/deepseek-v4-pro`, lightweight model: `deepseek/deepseek-v4-flash`
-- Agent depth: `subagent_depth: 3` (supports 3 levels of agent nesting)
-- Model isolation: `enabled_providers: ["deepseek"]` + `disabled_providers` double lock
-- Session sharing: disabled (`share: "disabled"`); snapshots: enabled (`snapshot: true`)
-- Permission baseline: allow by default, destructive bash commands set to `ask`; `.env`-like sensitive files set to `deny`; external directories set to `ask`; bash whitelist for read-only Agents (deny all by default + allow only read-only subcommands)
-- Context compression: DCP 60% threshold proactive compression + OpenCode native auto compaction near-overflow fallback, two complementary layers (prune trims old tool outputs)
-- Global rules: `AGENTS.md` (core principles, task rejection contract, self-verification, anti-patterns, etc.; context/token discipline delegated to `orchestrator`)
-- Skills: **18** `SKILL.md` skills in the `skills/` directory, loaded on-demand via the native `skill` tool
-- Plugins: `superpowers` (v6.3.0, process-type skills), `@tarquinen/opencode-dcp` (intelligent context trimming)
+- Default primary agent: `orchestrator`
+- Primary model: `deepseek/deepseek-v4-pro`; lightweight model: `deepseek/deepseek-v4-flash`
+- Agent nesting: `subagent_depth: 3` (supports 3 levels of subagent nesting)
+- Model isolation: single lock `enabled_providers: ["deepseek"]`
+- Session sharing: off (`share: "disabled"`); snapshots: on (`snapshot: true`)
+- Permission baseline: allow by default, destructive bash commands set to `ask`; sensitive `.env`-type files `deny`; external directories `ask`; read-only agents get a bash allowlist (deny all by default + allow read-only subcommands only)
+- Context compression: built-in compaction (opencode.jsonc) handles auto-triggering + pruning of stale tool output; DCP (dcp.jsonc) handles proactive dedup + compression thresholds — the two complement each other
+- Global rules: `AGENTS.md` (core principles, task rejection contract, self-verification, anti-patterns, etc.; context/token discipline pushed down to `orchestrator`)
+- Skills: **23** `SKILL.md` skills under `skills/`, loaded on demand via the native `skill` tool
+- Plugins: `superpowers` (v6.3.0, process skills), `@tarquinen/opencode-dcp` (intelligent context pruning)
 
 ## DeepSeek Model Configuration
 
 ### Prerequisites
 
-- OpenCode ≥ v1.14.24 (DeepSeek provider is built-in)
-- DeepSeek API Key: Apply at [platform.deepseek.com/api_keys](https://platform.deepseek.com/api_keys)
+- OpenCode ≥ v1.18.x (the DeepSeek provider is built in)
+- DeepSeek API key: request one at [platform.deepseek.com/api_keys](https://platform.deepseek.com/api_keys)
 
-### Method 1: TUI Interactive Configuration (Recommended)
+### Option 1: Interactive TUI Setup (Recommended)
 
 ```bash
 opencode
@@ -32,9 +32,9 @@ opencode
 # Then: /models → select deepseek-v4-pro
 ```
 
-The API Key will be automatically persisted to `~/.local/share/opencode/auth.json`.
+The API key is automatically persisted to `~/.local/share/opencode/auth.json`.
 
-### Method 2: Environment Variables
+### Option 2: Environment Variable
 
 Windows PowerShell:
 ```powershell
@@ -42,7 +42,7 @@ $env:DEEPSEEK_API_KEY="sk-your-key-here"
 opencode
 ```
 
-Permanent setup: Add `DEEPSEEK_API_KEY` to your system environment variables.
+Permanent setup: add `DEEPSEEK_API_KEY` to your system environment variables.
 
 ### Provider Configuration Reference
 
@@ -50,12 +50,11 @@ Permanent setup: Add `DEEPSEEK_API_KEY` to your system environment variables.
 {
   "model": "deepseek/deepseek-v4-pro",
   "small_model": "deepseek/deepseek-v4-flash",
-  "enabled_providers": ["deepseek"],
-  "disabled_providers": ["openai", "anthropic", "google", "openrouter"]
+  "enabled_providers": ["deepseek"]
 }
 ```
 
-To enable thinking/reasoning for the Pro model, append to `provider`:
+To enable thinking/reasoning for the Pro model, append the following to `provider`:
 
 ```jsonc
 "provider": {
@@ -71,17 +70,17 @@ To enable thinking/reasoning for the Pro model, append to `provider`:
 }
 ```
 
-> **Model ID Naming Convention**: `provider_id/model_id`, i.e., `deepseek/deepseek-v4-pro` and `deepseek/deepseek-v4-flash`.
+> **Model ID naming convention**: `provider_id/model_id` — i.e. `deepseek/deepseek-v4-pro` and `deepseek/deepseek-v4-flash`.
 
-## Installation & Deployment
+## Installation
 
-### Method 1: Clone + Environment Variable (Recommended, Cross-Platform)
+### Option 1: Clone + Environment Variable (Recommended, Cross-Platform)
 
 ```bash
 git clone https://github.com/znlgis/my-opencode-deepseek-config.git
 ```
 
-Then set `OPENCODE_CONFIG_DIR` to point to the `opencode/` subdirectory within the repo.
+Then point `OPENCODE_CONFIG_DIR` at the `opencode/` subdirectory in the repo and you're ready to go.
 
 **Windows (PowerShell)** — permanent:
 
@@ -102,9 +101,9 @@ opencode
 export OPENCODE_CONFIG_DIR="$HOME/path/to/my-opencode-deepseek-config/opencode"
 ```
 
-### Method 2: Symlink to Global Config Directory
+### Option 2: Symlink to the Global Config Directory
 
-**Windows (PowerShell, requires Administrator):**
+**Windows (PowerShell, admin required):**
 
 ```powershell
 New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.config"
@@ -117,29 +116,29 @@ New-Item -ItemType SymbolicLink -Path "$env:USERPROFILE\.config\opencode" -Targe
 ln -s /path/to/my-opencode-deepseek-config/opencode ~/.config/opencode
 ```
 
-> **Compatibility Note**: `~/.config/opencode` is the standard global config path for OpenCode. The `opencode/` subdirectory of this repository contains `agents/`, `skills/`, `AGENTS.md`, and other files whose layout fully follows OpenCode conventions. It will be automatically recognized after pointing to it via an environment variable or symlink.
+> **Compatibility note**: `~/.config/opencode` is OpenCode's standard global config path. The `opencode/` subdirectory in this repo contains `agents/`, `skills/`, `AGENTS.md`, and more, and follows OpenCode's layout conventions exactly — point to it via environment variable or symlink and it is picked up automatically.
 
-### Verify Installation
+### Verify the Installation
 
-Start OpenCode and verify:
-1. `/models` → Current model is `deepseek/deepseek-v4-pro`
-2. Agent list should show `orchestrator`, `planner`, `deep-worker`, etc. (10 Agents total)
-3. Enter any request; the Orchestrator automatically analyzes intent and routes
+Launch OpenCode and confirm:
+1. `/models` → the current model is `deepseek/deepseek-v4-pro`
+2. The agent list shows all 10 agents, including `orchestrator`, `planner`, and `deep-worker`
+3. Send any request — the Orchestrator analyzes intent and routes automatically
 
 ## Model Division of Labor
 
-This repository strictly confines its division of labor to the DeepSeek V4 dual-models, without introducing external models:
+This repo strictly divides work between the two DeepSeek V4 models — no other models are introduced:
 
-| Model | Usage |
+| Model | Purpose |
 | --- | --- |
-| `deepseek/deepseek-v4-pro` | Planning, architecture, root cause analysis, code review, heavy implementation, main orchestration |
-| `deepseek/deepseek-v4-flash` | Rapid exploration, external retrieval, lightweight tasks, simple edits |
+| `deepseek/deepseek-v4-pro` | Planning, architecture, root-cause analysis, code review, heavy implementation, orchestration |
+| `deepseek/deepseek-v4-flash` | Fast exploration, external lookup, lightweight tasks, simple edits |
 
 ### Routing Strategy
 
-- **Flash First**: Explicitly defined tasks like searching, locating, and simple editing prioritize the flash agent
-- **Pro for Reasoning**: Planning, analysis, review, complex implementations—use only pro
-- **Automatic Upgrade**: Automatically upgrades to pro when the flash agent cannot handle the task (with full context)
+- **Flash first**: well-defined tasks — search, lookup, simple edits — go to flash agents first
+- **Pro reserved for reasoning**: planning, analysis, review, complex implementation — pro only
+- **Automatic escalation**: when a flash agent can't handle a task, it escalates to pro automatically (with full context)
 
 ## Agent Structure
 
@@ -147,120 +146,124 @@ This repository strictly confines its division of labor to the DeepSeek V4 dual-
 
 | Agent | Model | Role |
 | --- | --- | --- |
-| `orchestrator` | v4-pro | Default entry: Intent Gate + Model-aware routing + Fallback chain |
+| `orchestrator` | v4-pro | Default entry point: intent gate + model-aware routing + fallback chains |
 
 ### Subagents
 
-| Agent | Model | Permissions | Role |
+| Agent | Model | Permission | Role |
 | --- | --- | --- | --- |
-| `planner` | v4-pro | Read/Write | Planning, architecture, task breakdown |
-| `deep-worker` | v4-pro | Read/Write | Heavy implementation, multi-file changes, complex debugging |
-| `oracle` | v4-pro | **Read-Only** | Root cause analysis, deep code understanding |
-| `reviewer` | v4-pro | **Read-Only** | Dual-axis code review (specifications + conventions) + severity calibration |
-| `ui-builder` | v4-pro | Read/Write | Frontend & UI related tasks |
-| `consultant` | v4-pro | Read/Write | Solution discussion, best practice advice |
-| `explore` | v4-flash | **Read-Only** | Codebase search, parallel exploration |
-| `librarian` | v4-flash | **Read-Only** | Documentation retrieval, Web search |
-| `light-orchestrator` | v4-flash | Read/Write | Lightweight tasks, single-file editing |
+| `planner` | v4-pro | read-write | Planning, architecture, task breakdown |
+| `deep-worker` | v4-pro | read-write | Heavy implementation, multi-file changes, complex debugging |
+| `oracle` | v4-pro | **read-only** | Root-cause analysis, deep code understanding |
+| `reviewer` | v4-pro | **read-only** | Two-axis code review (conventions + specs) + severity calibration |
+| `ui-builder` | v4-pro | read-write | Frontend and UI tasks |
+| `consultant` | v4-pro | read-write | Approach discussions, best-practice advice |
+| `explore` | v4-flash | **read-only** | Codebase search, parallel exploration |
+| `librarian` | v4-flash | **read-only** | Documentation lookup, web search |
+| `light-orchestrator` | v4-flash | read-write | Lightweight tasks, single-file edits |
 
-> `deep-worker` and `light-orchestrator` follow the "no research, no delegation" principle—they execute rather than explore, with context provided by the orchestrator.
+> `deep-worker` and `light-orchestrator` follow a "no research, no delegation" principle — they execute, not explore; context is provided by the orchestrator.
 >
-> Read-only Agents (`oracle`/`reviewer`/`explore`/`librarian`) are truly read-only: `edit: deny` + bash whitelist (deny all by default, allow only read-only subcommands such as `git status/diff/log/show/blame/grep` and `rg`; `oracle`/`reviewer` additionally allow `gh pr view/diff`, `gh issue view`, `gh api` to support `/review-pr` replies).
+> Read-only agents (`oracle`/`reviewer`/`explore`/`librarian`) are truly read-only: `edit: deny` + a bash allowlist (deny all by default, allow only read-only subcommands such as `git status/diff/log/show/blame/grep` and `rg`; `oracle`/`reviewer` additionally allow `gh pr view/diff`, `gh issue view`, and `gh api` to support `/review-pr` replies).
 
 ## Quick Commands
 
 ### Agent Routing Commands
 
-| Command | Agent | Usage |
+| Command | Agent | Purpose |
 | --- | --- | --- |
 | `/deep` | `deep-worker` | Heavy implementation, multi-file changes |
-| `/quick` | `light-orchestrator` | Lightweight tasks, single-file editing |
+| `/quick` | `light-orchestrator` | Lightweight tasks, single-file edits |
 | `/ui` | `ui-builder` | Frontend/UI work |
-| `/review` | `reviewer` (code-review) | Dual-axis parallel review (specifications + conventions) + severity calibration |
-| `/review-pr` | `reviewer` (code-review + gh-cli) | Review PRs and reply to them on GitHub |
-| `/plan` | `planner` | Create plans, technical solutions |
+| `/review` | `reviewer` (code-review) | Two-axis parallel review (conventions + specs) + severity calibration |
+| `/review-pr` | `reviewer` (code-review + gh-cli) | Review a PR and post the result to GitHub |
+| `/plan` | `planner` | Create plans and technical proposals |
 | `/search` | `librarian` | External search, documentation lookup |
-| `/oracle` | `oracle` | Deep analysis, problem tracing |
+| `/oracle` | `oracle` | Deep analysis, root-cause tracing |
 | `/consult` | `consultant` | Consulting, comparisons, recommendations |
 
 ### Operation Commands
 
-| Command | Agent | Usage |
+| Command | Agent | Purpose |
 | --- | --- | --- |
 | `/commit` | `light-orchestrator` | Generate Conventional Commits messages (inline format) |
-| `/release` | `deep-worker` (git-release) | Prepare Tag releases |
-| `/reflect` | `oracle` (reflect) | Identify friction → propose config optimizations |
-| `/handoff` | `light-orchestrator` (handoff) | Compress session into handoff documents |
+| `/release` | `deep-worker` (git-release) | Prepare a tagged release |
+| `/reflect` | `oracle` (reflect) | Surface friction → propose config improvements |
+| `/handoff` | `light-orchestrator` (handoff) | Compress the session into a handoff document |
 
 ### Inline Commands
 
-| Command | Agent | Usage |
+| Command | Agent | Purpose |
 | --- | --- | --- |
-| `/codemap` | `explore` (codemap) | Generate repository structure map |
-| `/simplify` | `oracle` (simplify) → `light-orchestrator` | oracle analyzes → light-orchestrator applies simplification |
+| `/codemap` | `explore` (codemap) | Generate a repository structure map |
+| `/simplify` | `oracle` (simplify) → `light-orchestrator` | oracle analyzes → light-orchestrator applies the simplifications |
 | `/rmslop` | `deep-worker` (remove-deadcode) | Clean up dead code and AI slop |
 
 ### Spec Commands
 
-| Command | Agent | Usage |
+| Command | Agent | Purpose |
 | --- | --- | --- |
-| `/spec-propose` | `planner` (spec-workflow) | Explore code → draft change proposals |
-| `/spec-apply` | `deep-worker` (spec-workflow) | Implement step-by-step via tasks.md → auto-archive |
+| `/spec-propose` | `planner` (spec-workflow) | Explore the code → draft a change proposal |
+| `/spec-apply` | `deep-worker` (spec-workflow) | Implement item by item per tasks.md → auto-archive |
 
 ## Skills
 
-OpenCode exposes skills on-demand via the native `skill` tool—Agents only load them when needed, saving context.
+OpenCode exposes skills on demand via the native `skill` tool — agents load them only when needed, so they never occupy context.
 
-| Skill | Role |
+| Skill | Purpose |
 | --- | --- |
-| `code-review` | Token-frugal multi-dimensional code review: tiered reports by dimension + severity, agreement points marked with highest confidence, never rewrites code unless asked |
-| `codemap` | Generate annotated repository structure maps for quick orientation, saving exploration tokens |
-| `gh-cli` | GitHub CLI v2.97+ reference: pagination, repo targeting, discussions/projects/rulesets/skills, rate limit, gh-aw agentic CI, gh api fallback |
-| `git-master` | Advanced Git operations: rebase, squash, fixup, bisect, reflog, code archaeology, worktree |
-| `git-release` | Tag releases: release notes, SemVer inference, gh release commands |
-| `resolving-merge-conflicts` | Resolve merge conflicts per-hunk: trace original intent, never invent new behavior, never --abort |
-| `handoff` | Compress sessions into handoff documents (path references, no content duplication) |
-| `opencode-config` | Write and maintain this repository's OpenCode config (agents/skills/commands/permissions) |
-| `reflect` | Continuous improvement: identify friction → propose minimal maintainable fixes |
-| `remove-deadcode` | Safely locate and delete dead code, verified via toolchain/LSP before deletion |
-| `security-review` | Pre-merge security review (injection/XSS/SSRF/secrets/deserialization/path traversal), reports only, never fixes |
-| `shared-language` | Build domain glossaries (CONTEXT.md), significantly saving tokens |
-| `simplify` | Behavior-preserving code simplification (oracle analyzes → applies) |
-| `spec-workflow` | Lightweight spec-driven changes: proposal → specs → design → tasks → archive |
-| `verification-planning` | Plan the narrowest verification path before implementation |
-| `verify-with-docs` | Verify API docs before coding, retrieval-first, prevents hallucination |
-| `grilling` | Requirements alignment interview: one question at a time, multiple choice preferred, act after ambiguity converges |
-| `tech-debt-audit` | 9-dimension tech debt audit (dead code/duplication/naming drift/complexity/dependencies/error handling/tests/docs/security), read-only report, no code changes |
+| `code-review` | Token-frugal, multi-dimensional code review: reports by dimension + severity, highest confidence on consensus points, deepreview self-falsification, never rewrites code unasked |
+| `codemap` | Generates an annotated repository structure map for quick orientation, saving exploration tokens |
+| `gh-cli` | GitHub CLI v2.97+ reference: pagination, repo targeting, discussions/projects/rulesets/skills, rate limits, gh-aw agentic CI, gh api fallback |
+| `git-master` | Advanced Git operations: rebase, squash, fixup, bisect, reflog, code archaeology, worktrees |
+| `git-release` | Tagged releases: release notes, SemVer inference, gh release commands |
+| `resolving-merge-conflicts` | Resolve merge conflicts hunk by hunk: trace original intent, never invent new behavior, never --abort |
+| `handoff` | Compresses a session into a handoff document (path references, no copied content) |
+| `opencode-config` | Writes and maintains OpenCode config in this repo (agents/skills/commands/permissions) |
+| `reflect` | Continuous improvement: surface friction → propose minimal, maintainable fixes |
+| `remove-deadcode` | Safely finds and deletes dead code, verified via toolchain/LSP before removal |
+| `security-review` | Pre-merge security review (injection/XSS/SSRF/secrets/deserialization/path traversal); reports, never auto-fixes |
+| `shared-language` | Builds a domain glossary (CONTEXT.md), saving significant tokens |
+| `simplify` | Behavior-preserving code simplification (oracle analyzes → applied) |
+| `spec-workflow` | Lightweight spec-driven change: proposal → specs → design → tasks → archive |
+| `verification-planning` | Plans the narrowest verification path before implementation |
+| `verify-with-docs` | Verifies API docs before coding — retrieval-first, hallucination-proof |
+| `grilling` | Requirements-alignment interview: one question at a time, multiple choice preferred, converge on ambiguity before acting |
+| `tech-debt-audit` | 9-dimension tech debt audit (dead code/duplication/naming drift/complexity/dependencies/error handling/tests/docs/security); read-only report, no code changes |
+| `wait-what` | Restates hard-to-parse user messages in one sentence for confirmation before acting |
+| `writing-for-agents` | Writing leverage for agent-facing docs (skills/AGENTS.md/pointer docs) |
+| `to-questionnaire` | Off-channel one-shot questionnaire (filled in asynchronously), distinct from grilling's live interview |
+| `research` | Deep research on open topics, producing cited Markdown, distinct from verify-with-docs single-point checks |
+| `wizard` | Human step-by-step wizard (bash script, `bash -n` verified), guides humans through steps only they can perform |
 
-## Design Decisions & Iteration History
+## Design Decisions & Iteration Log
 
-Core concepts draw inspiration from [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent) (intent gate, read-only isolation, anti-patterns), [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim) (scheduler priority, fallback chain, rejection contract, prompt cache safety, impact×confidence÷cost), [anomalyco/opencode](https://github.com/anomalyco/opencode) (configuration Schema, skill system), [cli/cli](https://github.com/cli/cli) (gh v2.97 command set, rate limit, gh-aw), [OpenSpec](https://github.com/Fission-AI/OpenSpec) (delta specs, OPSX action flow update/verify/four questions), [mattpocock/skills](https://github.com/mattpocock/skills) (conflict resolution discipline, handoff docs), [pi](https://github.com/earendil-works/pi) (answer first, edit later, concise responses, independent session collection), and [deepreview](https://github.com/mechanai/deepreview) (novelty classification convergence, effective-size routing, Points of Agreement). All implemented purely via configuration with zero extra dependencies.
+The core ideas draw on [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent) (intent gating, read-only isolation, anti-patterns), [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim) (dispatcher-first, fallback chains, rejection contract, prompt-cache safety, impact×confidence÷cost), [anomalyco/opencode](https://github.com/anomalyco/opencode) (config schema, skill system), [cli/cli](https://github.com/cli/cli) (gh v2.97 command set, rate limits, gh-aw), [OpenSpec](https://github.com/Fission-AI/OpenSpec) (delta specs, OPSX action flow update/verify/four questions), [mattpocock/skills](https://github.com/mattpocock/skills) (conflict resolution discipline, handoff documents), [pi](https://github.com/earendil-works/pi) (answer first then act, terse responses, independent session collection), and [deepreview](https://github.com/mechanai/deepreview) (novelty classification convergence, effective-size routing, Points of Agreement) — pure config, zero extra dependencies.
 
-> **Adapt, don't copy**: Heavy pipelines only contribute lightweight design concepts; redundant features are covered by existing agents/skills to avoid bloat. Adheres to the "simplify over add" principle, with each iteration aiming for a net reduction in tokens.
+> **Borrow, don't copy**: from heavyweight pipelines we take only lightweight design ideas; redundant features are covered by existing agents/skills, so nothing new is added. Following the "simplify before adding" principle, every iteration targets net token reduction.
 >
-> **This round (v27) mechanism sources**: OPSX action flow (update/verify/four questions) internalized into spec-workflow; independent session context collection and prompt cache safety (stable static prefix, volatile content at payload tail) borrowed from pi and oh-my-opencode-slim; impact×confidence÷cost iteration gating enters deep-worker; Points of Agreement (highest-confidence annotation of agreement points) borrowed from deepreview; gh-cli adds rate limit and gh-aw from cli/cli v2.97.
+> **This round (v28) — mechanism sources**: DeepSeek cache + thinking discipline, scope-first + delegate-always, atomic TODOs pushed down into AGENTS.md; 5 new skills (wait-what/writing-for-agents/to-questionnaire/research/wizard) bringing the total to 23; gh-cli gains 4 GHSA security entries; code-review absorbs deepreview self-falsification; removed .ai/calibration.yml (calibration rules inlined into code-review).
 >
-> **Evaluated but not adopted**: mattpocock/skills' progressive disclosure and wait-what (existing skill lazy-loading already covers their value); superpowers has no config knobs, kept as plugin string injection.
+> **Evaluated and rejected**: the remaining process skills from mattpocock/skills (code-review, tdd, implement, etc. — they overlap with superpowers/existing skills); superpowers has no config knobs, so it remains injected as a plugin string.
 
 ### Iteration Milestones
 
-27 iterations since v1, continuously aligning with upstream best practices:
+28 iterations since v1, continuously benchmarking best practices from upstream repositories:
 
-- **v1-v7 (Foundation)**: Dual-model binding, agent role system, intent-gate routing, AGENTS.md global rules, skills directory, permission baseline
-- **v8-v15 (Review + Specs + Contracts)**: code-review dual-axis calibration, spec-workflow, gh-cli alignment, rejection contract, background checks
-- **v16-v22 (Continuous Slimming)**: Commands 29→18 (-38%), AGENTS.md 290→211 (-27%), no-op sentence trimming, schema validation dead-key removal
-- **v23-v25 (Alignment + Security)**: Integrated 6 upstream repos, gh-cli v2.97 escape-injection advisory, procedure-driven prompt refinement, DCP window tuning
-- **v26 (This Round's Slimming)**: prune:true and tool_output 800/20480 tightening, DCP switched to 60%/30% percentage thresholds, grilling introduced replacing writing-great-skills, opencode-config slimmed 131→64, code-review tiering + validator, gh-cli adds gh status, AGENTS.md adds User Override, orchestrator delegation cost discipline, 7 agent files net −22 lines
-- **v27 (Deletion/Migration/Addition)**: Removed batch_tool dead config, ineffective `write: deny` on read-only agents, and 3 redundant bash rules; Context Management section migrated into an orchestrator-specific subsection; read-only agent bash whitelist, read adds `.env`; new tech-debt-audit skill; 15 skill descriptions slimmed 30-40%; gh-cli adds 5 points (rate limit/gh skill hosting/gh-aw etc.), code-review adds Points of Agreement, spec-workflow adds two update questions, orchestrator adds independent session collection + prompt cache safety, deep-worker adds impact×confidence÷cost
+- **v1-v7 (foundation)**: dual-model binding, agent role system, intent-gate routing, AGENTS.md global rules, skills directory, permission baseline
+- **v8-v15 (review + specs + contract)**: code-review two-axis calibration, spec-workflow, gh-cli alignment, rejection contract, background verification
+- **v16-v22 (continuous slimming)**: commands 29→18 (-38%), AGENTS.md 290→211 (-27%), sentence-by-sentence no-op pruning, schema validation dead-key removal
+- **v23-v25 (alignment + security)**: integrated 6 upstream repos, gh-cli v2.97 escaping/injection security section, procedure-driven prompt refinement, DCP window tuning
+- **v26 (this round's slimming)**: prune:true and tool_output tightened to 800/20480, DCP switched to 60%/30% percentage thresholds, grilling introduced replacing writing-great-skills, opencode-config slimmed 131→64, code-review grading + validator, gh-cli adds gh status, AGENTS.md adds User Override, orchestrator delegation cost discipline, 7 agent files net -22 lines
+- **v27 (delete/migrate/add)**: deleted batch_tool dead config, read-only agents' ineffective `write: deny`, 3 redundant bash rules; Context Management section moved into an orchestrator-specific subsection; read-only agent bash allowlist, read adds `.env`; added the tech-debt-audit skill; 15 skill descriptions slimmed 30-40%; gh-cli adds rate limits/gh skill host/gh-aw (5 points), code-review adds Points of Agreement, spec-workflow adds two update questions, orchestrator adds independent session collection + prompt-cache safety, deep-worker adds impact×confidence÷cost
+- **v28 (discipline refactor)**: cache + thinking discipline, scope-first + delegate-always, atomic TODOs pushed down to AGENTS.md; 5 new skills → 23 total; gh-cli adds 4 GHSA entries; code-review absorbs deepreview self-falsification; removed .ai/calibration.yml (rules inlined into code-review); README synced across ten languages
 
 ## Repository Structure
 
 ```text
 ├── opencode/                     # OpenCode config directory (deployable independently)
-│   ├── .ai/
-│   │   └── calibration.yml       # code-review severity calibration
 │   ├── agents/                   # 10 specialized Agents
-│   │   ├── orchestrator.md       # Main entry: intent gate + model-aware routing
+│   │   ├── orchestrator.md       # main entry: intent gate + model-aware routing
 │   │   ├── planner.md            # pro: architecture & planning
 │   │   ├── deep-worker.md        # pro: heavy implementation
 │   │   ├── oracle.md             # pro: deep code analysis (read-only)
@@ -270,7 +273,7 @@ Core concepts draw inspiration from [oh-my-openagent](https://github.com/code-ye
 │   │   ├── explore.md            # flash: codebase search (read-only)
 │   │   ├── librarian.md          # flash: external retrieval (read-only)
 │   │   └── light-orchestrator.md # flash: simple editing
-│   ├── skills/                   # 18 on-demand skills
+│   ├── skills/                   # 23 on-demand skills
 │   │   ├── code-review/          # dual-axis parallel review + severity calibration
 │   │   ├── codemap/              # generates repository structure map
 │   │   ├── gh-cli/               # GitHub CLI v2.97+ reference + security advisory
@@ -288,7 +291,12 @@ Core concepts draw inspiration from [oh-my-openagent](https://github.com/code-ye
 │   │   ├── tech-debt-audit/      # tech debt audit (9 dimensions, read-only report)
 │   │   ├── verification-planning/ # pre-implementation verification planning
 │   │   ├── verify-with-docs/     # retrieval-first API verification
-│   │   └── grilling/             # requirements alignment interview
+│   │   ├── grilling/             # requirements alignment interview
+│   │   ├── research/             # deep research on open topics (with citations)
+│   │   ├── to-questionnaire/     # off-channel one-shot questionnaire
+│   │   ├── wait-what/            # restates hard-to-parse messages in one sentence for confirmation
+│   │   ├── wizard/               # human step-by-step wizard (bash -n verified)
+│   │   └── writing-for-agents/   # writing for agent-facing docs
 │   ├── opencode.jsonc            # main config (18 commands)
 │   ├── AGENTS.md                 # global rules
 │   └── dcp.jsonc                 # DCP context compression (DeepSeek 128K, 60%/30% percentage thresholds)
@@ -299,9 +307,9 @@ Core concepts draw inspiration from [oh-my-openagent](https://github.com/code-ye
 
 ## Usage Guide
 
-### Mode 1: Orchestrator Automatic Routing (Default)
+### Mode 1: Orchestrator Auto-Routing (Default)
 
-Describe your requirements in natural language. The Orchestrator will automatically analyze intent, select the most suitable Agent and model, and execute.
+Describe your needs in natural language; the Orchestrator analyzes intent and picks the most suitable agent and model to execute.
 
 ```text
 "Help me debug the login API error"     → oracle analyzes root cause → returns diagnostic report
@@ -311,28 +319,28 @@ Describe your requirements in natural language. The Orchestrator will automatica
 "How to use React 19's use() API"       → librarian checks docs → returns signature and examples
 ```
 
-### Mode 2: Direct via Command Aliases
+### Mode 2: Command Alias Shortcuts
 
 | Scenario | Command |
 | --- | --- |
-| Complex implementations / multi-file changes | `/deep` |
-| Lightweight modifications / single-file edits | `/quick` |
-| Draft technical solutions / architecture design | `/plan` |
-| Debugging / deep analysis | `/oracle` |
+| Complex implementation / multi-file changes | `/deep` |
+| Lightweight changes / single-file edits | `/quick` |
+| Technical proposal / architecture design | `/plan` |
+| Bug hunting / deep analysis | `/oracle` |
 | Code review | `/review` |
 | External search / API lookup | `/search` |
 | Frontend / UI work | `/ui` |
-| Solution discussion / trade-off analysis | `/consult` |
+| Approach discussion / trade-offs | `/consult` |
 | Structured debugging | `/oracle` |
 
 ### Typical Workflows
 
-**Develop new features (spec-driven):**
+**Building a new feature (spec-driven):**
 ```text
 /spec-propose  → /spec-apply  → /review
 ```
 
-**Debugging:**
+**Debugging a bug:**
 ```text
 /oracle  → /deep  → /rmslop  → /commit
 ```
@@ -345,9 +353,12 @@ Describe your requirements in natural language. The Orchestrator will automatica
 
 ## Design Philosophy
 
-- **Purely config-driven, zero extra dependencies** — All capabilities are implemented via `opencode.jsonc` + `agents/*.md` + `skills/*/SKILL.md` + `AGENTS.md`
-- **Maximized use of DeepSeek V4 dual-models** — Pro handles reasoning & decision-making, Flash handles queries & lightweight execution
-- **Token efficiency first** — Path references instead of pasting files, on-demand skill loading, tiered compression management
-- **Plugins enhance without overpowering** — superpowers provides process discipline, DCP provides intelligent compression instead of blunt truncation (adaptive percentage thresholds, native compaction as fallback)
-- **Separation of execution and exploration** — deep-worker/light-orchestrator prohibit research/delegation, explore/librarian prohibit modifications
-- **Continuous improvement** — reflect mechanizes friction detection, dual-axis calibration in code-review ensures quality
+- **Pure config-driven, zero extra dependencies** — every capability comes from `opencode.jsonc` + `agents/*.md` + `skills/*/SKILL.md` + `AGENTS.md`
+- **Maximum use of the DeepSeek V4 dual models** — Pro for reasoning and decisions, Flash for lookup and lightweight execution
+- **Token efficiency first** — path references instead of pasted files, skills loaded on demand, tiered compression management
+- **Plugins add value without stealing the spotlight** — superpowers provides process discipline, DCP (dcp.jsonc) handles proactive dedup + compression thresholds, built-in compaction (opencode.jsonc) handles auto-trigger + prune fallback
+- **Execution separated from exploration** — deep-worker/light-orchestrator must not research or delegate; explore/librarian must not modify
+- **Cache + thinking discipline** — stable static prefixes to hit DeepSeek's prompt cache; temperature 0 for coding tasks; thinking enabled only for reasoning tasks, off for simple/retrieval tasks
+- **Scope First + Delegate Always** — define scope first (2+ steps / multi-file / architecture changes go through planner), then delegate execution; top-level tokens are reserved for routing and hard problems
+- **Atomic TODOs** — multi-step tasks start with an ordered TODO list, one item in_progress → completed at a time; format `path: action for scenario — verify by check`
+- **Continuous improvement** — reflect mechanizes friction discovery, code-review's two-axis calibration guards quality

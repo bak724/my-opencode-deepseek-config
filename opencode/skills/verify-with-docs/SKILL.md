@@ -7,6 +7,8 @@ description: Verify a specific or fast-moving library, framework, or API against
 
 Your training data has a cutoff and libraries move fast, so for any code that
 touches a specific dependency, **retrieve before you write.**
+Prefer retrieval over pre-training memory — never trust the model's memorized
+API surface when the current docs are reachable.
 
 ## When this applies
 

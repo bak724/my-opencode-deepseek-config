@@ -9,19 +9,19 @@
 - 預設主 Agent：`orchestrator`
 - 主模型：`deepseek/deepseek-v4-pro`，輕量模型：`deepseek/deepseek-v4-flash`
 - 代理層級：`subagent_depth: 3`（支援 3 級代理巢狀）
-- 模型隔離：`enabled_providers: ["deepseek"]` + `disabled_providers` 雙重鎖
+- 模型隔離：`enabled_providers: ["deepseek"]` 單鎖
 - 對話分享：關閉（`share: "disabled"`）；快照：開啟（`snapshot: true`）
 - 權限基線：預設放行，破壞性 bash 命令設為 `ask`；`.env` 類敏感檔案 `deny`；外部目錄 `ask`；唯讀 Agent 的 bash 白名單（預設 deny 全部 + 僅放行唯讀子命令）
-- 上下文壓縮：DCP 60% 閾值主動壓縮 + OpenCode 原生 auto compaction 近溢出兜底，兩層互補（prune 裁舊工具輸出）
+- 上下文壓縮：內建 compaction（opencode.jsonc）管自動觸發 + prune 裁舊工具輸出，DCP（dcp.jsonc）管主動去重 + 壓縮閾值，兩者互補
 - 全域規則：`AGENTS.md`（核心原則、任務拒絕契約、自我驗證、反模式等；上下文/Token 紀律已下沉到 `orchestrator`）
-- 技能：`skills/` 目錄下 **18 個** `SKILL.md` 技能，透過原生 `skill` 工具按需載入
+- 技能：`skills/` 目錄下 **23 個** `SKILL.md` 技能，透過原生 `skill` 工具按需載入
 - 外掛：`superpowers`（v6.3.0，過程型技能）、`@tarquinen/opencode-dcp`（智慧上下文裁剪）
 
 ## DeepSeek 模型配置
 
 ### 前置條件
 
-- OpenCode ≥ v1.14.24（DeepSeek provider 為內建）
+- OpenCode ≥ v1.18.x（DeepSeek provider 為內建）
 - DeepSeek API Key：[platform.deepseek.com/api_keys](https://platform.deepseek.com/api_keys) 申請
 
 ### 方式一：TUI 互動式配置（推薦）
@@ -50,8 +50,7 @@ opencode
 {
   "model": "deepseek/deepseek-v4-pro",
   "small_model": "deepseek/deepseek-v4-flash",
-  "enabled_providers": ["deepseek"],
-  "disabled_providers": ["openai", "anthropic", "google", "openrouter"]
+  "enabled_providers": ["deepseek"]
 }
 ```
 
@@ -213,7 +212,7 @@ OpenCode 透過原生 `skill` 工具按需暴露技能——Agent 只在需要�
 
 | Skill | 作用 |
 | --- | --- |
-| `code-review` | 省 token 多維程式碼審查：按維度+嚴重度分級報告，一致點標最高置信度，從不擅自改碼 |
+| `code-review` | 省 token 多維程式碼審查：按維度+嚴重度分級報告，一致點標最高置信度，deepreview 自我證偽，從不擅自改碼 |
 | `codemap` | 生成帶標註的儲存庫結構圖，快速定向，節省探索 token |
 | `gh-cli` | GitHub CLI v2.97+ 參考：分頁、儲存庫定位、discussions/projects/rulesets/skills、rate limit、gh-aw agentic CI、gh api 回退 |
 | `git-master` | 進階 Git 操作：rebase、squash、fixup、bisect、reflog、程式碼考古、worktree |
@@ -231,6 +230,11 @@ OpenCode 透過原生 `skill` 工具按需暴露技能——Agent 只在需要�
 | `verify-with-docs` | 編碼前核對 API 文件，檢索優先，防幻覺 |
 | `grilling` | 需求對齊訪談：一次一問、多選優先，歧義收斂後再動手 |
 | `tech-debt-audit` | 9 維度技術債審計（死程式碼/重複/命名漂移/複雜度/依賴/錯誤處理/測試/文件/安全），唯讀報告不改碼 |
+| `wait-what` | 使用者訊息難懂時先一句話重述確認，再動手 |
+| `writing-for-agents` | 寫給 agent 看的文件（skill/AGENTS.md/指針文件）的寫作槓桿 |
+| `to-questionnaire` | 離通道一次性問卷（非同步填寫），區別於 grilling 的即時訪談 |
+| `research` | 開放課題深調研，產出帶引用的 Markdown，區別於 verify-with-docs 的單點核對 |
+| `wizard` | 人工逐步嚮導（bash 指令碼，`bash -n` 驗證），引導人類完成自身才能做的步驟 |
 
 ## 設計決策與迭代記錄
 
@@ -238,13 +242,13 @@ OpenCode 透過原生 `skill` 工具按需暴露技能——Agent 只在需要�
 
 > **借鑑而非照搬**：過重的流水線只汲取輕量化設計理念；冗餘功能由現有 agents/skills 覆蓋，不新增。遵循「精簡優先於新增」原則，每次迭代都以淨減 token 為目標。
 >
-> **本輪（v27）機制來源**：OPSX 動作流（update/verify/四問）內化進 spec-workflow；獨立對話收集上下文、提示詞快取安全（靜態前綴穩定、易變內容放 payload 尾部）借鑑 pi 與 oh-my-opencode-slim；impact×confidence÷cost 迭代把關進入 deep-worker；Points of Agreement（一致點最高置信度標註）借鑑 deepreview；gh-cli 增補 rate limit 與 gh-aw 自 cli/cli v2.97。
+> **本輪（v28）機制來源**：DeepSeek 快取+thinking 紀律、scope-first+委派優先、原子 TODO 下沉進 AGENTS.md；新增 5 技能（wait-what/writing-for-agents/to-questionnaire/research/wizard）至 23 個；gh-cli 增補 4 條 GHSA 安全條目；code-review 融入 deepreview 自我證偽；刪除 .ai/calibration.yml（校準規則內聯進 code-review）。
 >
-> **評估後未採用**：mattpocock/skills 的漸進式揭露與 wait-what（現有技能惰性載入已覆蓋其價值）；superpowers 無配置旋鈕，保持外掛字串形式注入。
+> **評估後未採用**：mattpocock/skills 的其餘流程類技能（code-review、tdd、implement 等與 superpowers／現有技能重疊）；superpowers 無配置旋鈕，保持外掛字串形式注入。
 
 ### 迭代里程碑
 
-自 v1 以來歷經 27 次迭代，持續對標上游儲存庫最佳實踐：
+自 v1 以來歷經 28 次迭代，持續對標上游儲存庫最佳實踐：
 
 - **v1-v7（奠基）**：雙模型繫結、Agent 角色體系、意圖門控路由、AGENTS.md 全域規則、Skills 目錄、權限基線
 - **v8-v15（審查+規約+契約）**：code-review 雙軸校準、spec-workflow、gh-cli 對齊、拒絕契約、後臺核查
@@ -252,13 +256,12 @@ OpenCode 透過原生 `skill` 工具按需暴露技能——Agent 只在需要�
 - **v23-v25（對齊+安全）**：整合 6 個上游儲存庫、gh-cli v2.97 轉義注入安全章節、procedure-driven 提示精化、DCP 視窗調優
 - **v26（本輪瘦身）**：prune:true 與 tool_output 800/20480 收緊、DCP 切換 60%/30% 百分比閾值、grilling 引入替代 writing-great-skills、opencode-config 131→64 精簡、code-review 分級+validator、gh-cli 補 gh status、AGENTS.md 增 User Override、orchestrator 委託成本紀律、7 個 agent 檔案淨減 22 行
 - **v27（刪除/遷移/新增）**：刪 batch_tool 死配置、唯讀 agent 無效 `write: deny`、bash 3 條冗餘；Context Management 段遷入 orchestrator 專屬小節；唯讀 agent bash 白名單、read 補 `.env`；新增 tech-debt-audit 技能；15 條技能 description 瘦身 30-40%；gh-cli 補 rate limit/gh skill 宿主/gh-aw 等 5 點、code-review 增 Points of Agreement、spec-workflow 補 update 兩問、orchestrator 增獨立對話收集+提示詞快取安全、deep-worker 增 impact×confidence÷cost
+- **v28（紀律重構）**：快取+thinking 紀律、scope-first+委派優先、原子 TODO 下沉 AGENTS.md；新增 5 技能至 23 個；gh-cli 補 4 條 GHSA；code-review 融入 deepreview 自我證偽；刪除 .ai/calibration.yml（規則內聯進 code-review）；README 十語種同步
 
 ## 儲存庫結構
 
 ```text
 ├── opencode/                     # OpenCode 配置目錄（可獨立部署）
-│   ├── .ai/
-│   │   └── calibration.yml       # code-review 嚴重度校準
 │   ├── agents/                   # 10 個專職 Agent
 │   │   ├── orchestrator.md       # 主入口：意圖門控 + 模型感知路由
 │   │   ├── planner.md            # pro：架構與規劃
@@ -270,7 +273,7 @@ OpenCode 透過原生 `skill` 工具按需暴露技能——Agent 只在需要�
 │   │   ├── explore.md            # flash：程式碼庫搜尋（唯讀）
 │   │   ├── librarian.md          # flash：外部檢索（唯讀）
 │   │   └── light-orchestrator.md # flash：簡單編輯
-│   ├── skills/                   # 18 個按需載入技能
+│   ├── skills/                   # 23 個按需載入技能
 │   │   ├── code-review/          # 雙軸並行審查 + 嚴重度校準
 │   │   ├── codemap/              # 生成儲存庫結構圖
 │   │   ├── gh-cli/               # GitHub CLI v2.97+ 參考 + 安全警告
@@ -288,7 +291,12 @@ OpenCode 透過原生 `skill` 工具按需暴露技能——Agent 只在需要�
 │   │   ├── tech-debt-audit/      # 技術債審計（9 維度，唯讀報告）
 │   │   ├── verification-planning/ # 實作前驗證路徑規劃
 │   │   ├── verify-with-docs/     # 檢索優先 API 驗證
-│   │   └── grilling/             # 需求對齊訪談
+│   │   ├── grilling/             # 需求對齊訪談
+│   │   ├── research/             # 開放課題深調研（帶引用）
+│   │   ├── to-questionnaire/     # 離通道一次性問卷
+│   │   ├── wait-what/            # 難懂訊息先一句話重述確認
+│   │   ├── wizard/               # 人工逐步嚮導（bash -n 驗證）
+│   │   └── writing-for-agents/   # 面向 agent 的文件寫作
 │   ├── opencode.jsonc            # 主配置（18 條命令）
 │   ├── AGENTS.md                 # 全域規則
 │   └── dcp.jsonc                 # DCP 上下文壓縮（DeepSeek 128K，60%/30% 百分比閾值）
@@ -348,6 +356,9 @@ OpenCode 透過原生 `skill` 工具按需暴露技能——Agent 只在需要�
 - **純配置驅動，零額外依賴** —— 所有能力由 `opencode.jsonc` + `agents/*.md` + `skills/*/SKILL.md` + `AGENTS.md` 實作
 - **DeepSeek V4 雙模型極致利用** —— Pro 做推理與決策，Flash 做查詢與輕量執行
 - **Token 效率優先** —— 路徑引用替代貼上檔案、技能按需載入、壓縮分級管理
-- **外掛增效但不喧賓奪主** —— superpowers 提供過程紀律，DCP 智慧壓縮替代簡單截斷（百分比閾值自適應，原生 compaction 兜底）
+- **外掛增效但不喧賓奪主** —— superpowers 提供過程紀律，DCP（dcp.jsonc）主動去重+壓縮閾值，內建 compaction（opencode.jsonc）自動觸發+prune 兜底
 - **執行與探索分離** —— deep-worker/light-orchestrator 禁止研究/委託，explore/librarian 禁止修改
+- **快取與 thinking 紀律** —— 靜態前綴穩定以命中 DeepSeek 提示詞快取；編碼任務 0 溫度；thinking 僅對推理任務開啟，簡單/檢索任務關閉
+- **Scope First + Delegate Always** —— 先定範圍（2+ 步/多檔案/架構變更先走 planner），再委派執行，頂層 token 只留給路由與難題
+- **原子 TODO** —— 多步任務先寫有序 TODO，逐條 in_progress→completed；格式 `path: action for scenario — verify by check`
 - **持續改進** —— reflect 機制化發現摩擦、code-review 雙軸校準保證品質

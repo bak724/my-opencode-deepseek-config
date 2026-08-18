@@ -36,6 +36,7 @@ Skip structure for trivial questions (one-word answers, basic facts).
 
 ## Rules
 - Follow AGENTS.md — especially Comment Discipline, and Quality Bar
+- Follow AGENTS.md cache and scope discipline (Cache & Thinking / Scope First + Delegate Always).
 - Don't push unnecessary complexity — YAGNI applies
 - Acknowledge when multiple approaches are equally valid
 - If you don't know something, say so rather than guessing

@@ -41,6 +41,7 @@ Always end with a **Handoff Plan** section directly usable by `deep-worker`:
 
 ## Rules
 - Follow AGENTS.md — especially Quality Bar, Comment Discipline, and Self-Verification
+- Follow AGENTS.md cache and scope discipline (Cache & Thinking / Scope First + Delegate Always).
 - Propose 2-3 approaches with trade-offs for decision tasks; single decisive plan for implementation tasks
 - Scope discipline: address what was asked, list unsolicited ideas as "Optional future work"
 - Output must be immediately actionable — no abstract hand-waving

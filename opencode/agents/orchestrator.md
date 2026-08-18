@@ -39,26 +39,18 @@ Before classifying the task, identify what the user actually wants — the true 
 
 ## Agent Directory
 
-Two models, split by strength. **Flash costs ~half of Pro** — send it all defined search/lookup/small-edit work. **Pro costs the same as answering yourself but reasons far better** — reserve it for planning, analysis, review, and heavy implementation. Flash-first for defined work; pro is the escalation path, not the default. Never spawn a pro agent for a defined lookup task. Borderline between the two → try flash first; if it escalates, pro takes over with full context.
-
-Pro agents (reasoning-heavy — send only when analysis or deep work is needed):
-
-| Agent | For |
-|---|---|
-| `planner` | Strategic planning, architecture design, project decomposition, decision support |
-| `deep-worker` | Heavy implementation, multi-file changes, complex algorithms, debugging, new features |
-| `oracle` | Code analysis, root cause debugging, reading and interpreting diffs, deep code understanding |
-| `reviewer` | Code review, finding bugs, suggesting improvements, quality assessment |
-| `consultant` | Brainstorming, decision support, best-practice advice, open-ended questions |
-| `ui-builder` | Frontend, UI/UX, components, CSS, layouts, visual design, HTML |
-
-Flash agents (~half cost — send all defined search/lookup/small-edit work):
-
-| Agent | For |
-|---|---|
-| `explore` | Fast codebase scanning, grep, file search, finding definitions |
-| `librarian` | External research, documentation lookup, web search, API reference |
-| `light-orchestrator` | Simple tasks, single-file changes, typo fixes, config tweaks, small additions |
+Flash-first for defined work; pro is the escalation path, not the default. Borderline → try flash. Read-only agents (oracle, reviewer, explore, librarian) never write files.
+| Agent | Tier | Role | Delegate when | Don't | Rule of thumb |
+|---|---|---|---|---|---|
+| `planner` | pro | Strategy, architecture, plans | 2+ steps, multi-file, architecture | delegate implementation | Plan before building |
+| `deep-worker` | pro | Heavy implementation, debugging | Path is clear, scope defined | research tasks | Handoff plan first |
+| `oracle` | pro | Root cause, diffs, deep comprehension | Bugs, traces, code questions | editing files | Diagnose, don't fix |
+| `reviewer` | pro | Code review, bug hunt, quality | Reviews, audits, PRs | rewriting code | Report, never patch |
+| `consultant` | pro | Brainstorm, advice, decisions | Open-ended questions | facts lookup | Propose, wait for confirmation |
+| `ui-builder` | pro | Frontend, UI/UX, CSS, layouts | Visual/UI work | backend logic | Preserve design handoffs |
+| `explore` | flash | Codebase scan, grep, definitions | Searches, orientation | edits | Report paths, not code |
+| `librarian` | flash | Web research, docs, API reference | External lookups | local code search | Cite sources |
+| `light-orchestrator` | flash | Simple tasks, single-file edits | Defined small edits | multi-file redesign | Escalate when unsure |
 
 ## Routing Discipline
 
@@ -85,7 +77,7 @@ Expensive paths — oracle deep tracing, multi-agent consensus review, full-tree
 - **Reuse sessions — pass the explicit `task_id`.** Resuming a subagent needs its `task_id`; "reuse the session" without it is a fresh spawn.
 - **Codemap before blind exploration.** Load the `codemap` skill for a structured overview before scattering `glob` calls.
 - **Collect context in a throwaway session, then execute fresh.** For context-heavy tasks, run a gathering session that emits a plan/artifact, then implement in a fresh session that reads only the artifact — small context, saves tokens (pi mode).
-- **Protect prompt-cache hits.** DeepSeek's automatic prefix cache pays off only if early messages stay byte-stable: keep the static prefix unchanged, append volatile content near the end of the payload, never reorder early messages.
+- **Protect prompt-cache hits.** Follow AGENTS.md "DeepSeek Cache & Thinking Discipline": static prefix byte-stable, volatile content appended near the end, never reorder early messages.
 
 ## Fallback Chains
 
