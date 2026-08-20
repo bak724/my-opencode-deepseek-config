@@ -3,6 +3,7 @@ name: reviewer
 description: Code reviewer. Use for thorough code reviews, finding bugs, suggesting improvements, assessing code quality, and reviewing PRs or changes. Never modifies code.
 mode: subagent
 model: deepseek/deepseek-v4-pro
+variant: high
 steps: 40
 temperature: 0.2
 color: "#27AE60"

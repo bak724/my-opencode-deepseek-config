@@ -1,6 +1,6 @@
 # My OpenCode × DeepSeek Config
 
-[简体中文](README.md) | [繁體中文](README.zh-TW.md) | **English** | [Русский](README.ru-RU.md) | [Français](README.fr-FR.md) | [Deutsch](README.de-DE.md) | [Español](README.es-ES.md) | [Português](README.pt-BR.md) | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md)
+[简体中文](README.md) | **English**
 
 **OpenCode × DeepSeek Optimal Config** — a configuration scheme that pushes the DeepSeek V4 dual-model lineup (Pro + Flash) to its full potential within OpenCode's multi-agent framework. Core philosophy: **token efficiency first — the best development results at the lowest context cost**.
 
@@ -131,13 +131,13 @@ This repo strictly divides work between the two DeepSeek V4 models — no other 
 
 | Model | Purpose |
 | --- | --- |
-| `deepseek/deepseek-v4-pro` | Planning, architecture, root-cause analysis, code review, heavy implementation, orchestration |
-| `deepseek/deepseek-v4-flash` | Fast exploration, external lookup, lightweight tasks, simple edits |
+| `deepseek/deepseek-v4-pro` | Deep reasoning, root-cause analysis, code review, heavy multi-file implementation |
+| `deepseek/deepseek-v4-flash` | Orchestration/routing, planning, routine implementation, consultation, UI, exploration, external lookup, light edits, title/summary/compaction |
 
 ### Routing Strategy
 
-- **Flash first**: well-defined tasks — search, lookup, simple edits — go to flash agents first
-- **Pro reserved for reasoning**: planning, analysis, review, complex implementation — pro only
+- **Flash first**: well-defined tasks — routing, search, planning, routine implementation, consultation, UI, exploration — go to flash agents first
+- **Pro reserved for reasoning**: deep reasoning, root-cause analysis, code review, heavy multi-file implementation — pro only
 - **Automatic escalation**: when a flash agent can't handle a task, it escalates to pro automatically (with full context)
 
 ## Agent Structure
@@ -146,18 +146,18 @@ This repo strictly divides work between the two DeepSeek V4 models — no other 
 
 | Agent | Model | Role |
 | --- | --- | --- |
-| `orchestrator` | v4-pro | Default entry point: intent gate + model-aware routing + fallback chains |
+| `orchestrator` | v4-flash | Default entry point: intent gate + model-aware routing + fallback chains |
 
 ### Subagents
 
 | Agent | Model | Permission | Role |
 | --- | --- | --- | --- |
-| `planner` | v4-pro | read-write | Planning, architecture, task breakdown |
+| `planner` | v4-flash | read-write | Planning, architecture, task breakdown |
 | `deep-worker` | v4-pro | read-write | Heavy implementation, multi-file changes, complex debugging |
 | `oracle` | v4-pro | **read-only** | Root-cause analysis, deep code understanding |
 | `reviewer` | v4-pro | **read-only** | Two-axis code review (conventions + specs) + severity calibration |
-| `ui-builder` | v4-pro | read-write | Frontend and UI tasks |
-| `consultant` | v4-pro | read-write | Approach discussions, best-practice advice |
+| `ui-builder` | v4-flash | read-write | Frontend and UI tasks |
+| `consultant` | v4-flash | read-write | Approach discussions, best-practice advice |
 | `explore` | v4-flash | **read-only** | Codebase search, parallel exploration |
 | `librarian` | v4-flash | **read-only** | Documentation lookup, web search |
 | `light-orchestrator` | v4-flash | read-write | Lightweight tasks, single-file edits |
@@ -264,12 +264,12 @@ The core ideas draw on [oh-my-openagent](https://github.com/code-yeongyu/oh-my-o
 ├── opencode/                     # OpenCode config directory (deployable independently)
 │   ├── agents/                   # 10 specialized Agents
 │   │   ├── orchestrator.md       # main entry: intent gate + model-aware routing
-│   │   ├── planner.md            # pro: architecture & planning
+│   │   ├── planner.md            # flash: architecture & planning
 │   │   ├── deep-worker.md        # pro: heavy implementation
 │   │   ├── oracle.md             # pro: deep code analysis (read-only)
 │   │   ├── reviewer.md           # pro: dual-axis code review (read-only)
-│   │   ├── consultant.md         # pro: solution discussion & advice
-│   │   ├── ui-builder.md         # pro: frontend & UI
+│   │   ├── consultant.md         # flash: solution discussion & advice
+│   │   ├── ui-builder.md         # flash: frontend & UI
 │   │   ├── explore.md            # flash: codebase search (read-only)
 │   │   ├── librarian.md          # flash: external retrieval (read-only)
 │   │   └── light-orchestrator.md # flash: simple editing
@@ -301,8 +301,8 @@ The core ideas draw on [oh-my-openagent](https://github.com/code-yeongyu/oh-my-o
 │   ├── AGENTS.md                 # global rules
 │   └── dcp.jsonc                 # DCP context compression (DeepSeek 128K, 60%/30% percentage thresholds)
 ├── README.md
-├── LICENSE
-└── README.*.md                   # READMEs in other languages
+├── README.en-US.md
+└── LICENSE
 ```
 
 ## Usage Guide
@@ -354,11 +354,11 @@ Describe your needs in natural language; the Orchestrator analyzes intent and pi
 ## Design Philosophy
 
 - **Pure config-driven, zero extra dependencies** — every capability comes from `opencode.jsonc` + `agents/*.md` + `skills/*/SKILL.md` + `AGENTS.md`
-- **Maximum use of the DeepSeek V4 dual models** — Pro for reasoning and decisions, Flash for lookup and lightweight execution
+- **Maximum use of the DeepSeek V4 dual models** — Pro for deep reasoning and heavy implementation, Flash for routing, planning, and routine execution
 - **Token efficiency first** — path references instead of pasted files, skills loaded on demand, tiered compression management
 - **Plugins add value without stealing the spotlight** — superpowers provides process discipline, DCP (dcp.jsonc) handles proactive dedup + compression thresholds, built-in compaction (opencode.jsonc) handles auto-trigger + prune fallback
 - **Execution separated from exploration** — deep-worker/light-orchestrator must not research or delegate; explore/librarian must not modify
-- **Cache + thinking discipline** — stable static prefixes to hit DeepSeek's prompt cache; temperature 0 for coding tasks; thinking enabled only for reasoning tasks, off for simple/retrieval tasks
+- **Cache + thinking discipline** — stable static prefixes to hit DeepSeek's prompt cache; temperature 0 for coding tasks; thinking effort set per-agent via the frontmatter `variant` key (low/medium/high/max, no off tier — v4 always reasons)
 - **Scope First + Delegate Always** — define scope first (2+ steps / multi-file / architecture changes go through planner), then delegate execution; top-level tokens are reserved for routing and hard problems
 - **Atomic TODOs** — multi-step tasks start with an ordered TODO list, one item in_progress → completed at a time; format `path: action for scenario — verify by check`
 - **Continuous improvement** — reflect mechanizes friction discovery, code-review's two-axis calibration guards quality

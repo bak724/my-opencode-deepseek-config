@@ -21,9 +21,10 @@ orchestrator prompt (`agents/orchestrator.md`).
    `explore`, `librarian`) never modify files; they report findings as text.
 6. **Don't create files unless asked.** Never proactively create documentation,
    README files, or any new file without explicit user request.
-7. **Right-size the model to the task.** Prefer flash for search, lookup, and
-   simple edits; reserve pro for reasoning and heavy implementation. When
-   borderline, prefer flash.
+7. **Right-size the model to the task.** Prefer flash for routing, search,
+   lookup, planning, and routine implementation; reserve pro for deep
+   reasoning, root-cause analysis, code review, and heavy multi-file
+   implementation. When borderline, prefer flash, then escalate.
 8. **Know your stop condition.** Before starting, define the observable
    condition that means "done". Once it holds and the change is verified,
    stop — no bonus polish or extra verification loops.
@@ -43,7 +44,10 @@ orchestrator prompt (`agents/orchestrator.md`).
 - **Freeze toolsets.** Never reorder tool schemas or injected rules mid-session.
 - **Temperature.** Coding tasks: 0; with thinking on, don't set temperature/top_p (silently ignored).
 - **Thinking.** Off for simple/retrieval tasks (flash saves the most output
-  tokens); on for complex multi-step agent tasks.
+  tokens); on for complex multi-step agent tasks. DeepSeek v4 thinking effort
+  is set per-agent via the frontmatter `variant` key (low/medium/high/max;
+  there is no off tier — v4 always reasons). Flash roles use low/medium; pro
+  roles use high.
 - **reasoning_content** must round-trip on tool calls (opencode handles it); never reorder messages in ways that break it.
 
 ## Scope First + Delegate Always

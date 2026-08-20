@@ -55,15 +55,17 @@
             "description": "Official opencode docs, schema, and configuration examples"
         }
     },
-    // Built-in utility agents (no .md file). Pro for primary work, Flash for
-    // background chores. `fallback` is not a real schema key — omitted; OpenCode
+    // Built-in utility agents (no .md file). Flash-first policy: build/plan/
+    // title/summary/compaction all run on flash; `variant` sets thinking effort.
+    // Pro stays the global default for safety, and heavy work escalates to
+    // deep-worker (pro). `fallback` is not a real schema key — omitted; OpenCode
     // already falls back small_model -> model internally when a model is missing.
     "agent": {
-        "build": { "model": "deepseek/deepseek-v4-pro", "mode": "subagent" },
-        "plan": { "model": "deepseek/deepseek-v4-pro" },
-        "title": { "model": "deepseek/deepseek-v4-flash" },
-        "summary": { "model": "deepseek/deepseek-v4-flash" },
-        "compaction": { "model": "deepseek/deepseek-v4-flash" }
+        "build": { "model": "deepseek/deepseek-v4-flash", "mode": "subagent", "variant": "medium" },
+        "plan": { "model": "deepseek/deepseek-v4-flash", "variant": "high" },
+        "title": { "model": "deepseek/deepseek-v4-flash", "variant": "low" },
+        "summary": { "model": "deepseek/deepseek-v4-flash", "variant": "low" },
+        "compaction": { "model": "deepseek/deepseek-v4-flash", "variant": "low" }
     },
     // Trim only oversized tool outputs (full text still saved to disk, preview
     // returned). 800 lines / 20KB balances token savings against re-reads:

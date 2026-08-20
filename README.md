@@ -1,6 +1,6 @@
 # My OpenCode × DeepSeek Config
 
-**简体中文** | [繁體中文](README.zh-TW.md) | [English](README.en-US.md) | [Русский](README.ru-RU.md) | [Français](README.fr-FR.md) | [Deutsch](README.de-DE.md) | [Español](README.es-ES.md) | [Português](README.pt-BR.md) | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md)
+**简体中文** | [English](README.en-US.md)
 
 **OpenCode × DeepSeek 最优配置** —— 在 OpenCode 多 Agent 框架下，将 DeepSeek V4 双模型（Pro + Flash）的能力发挥到极致的配置方案。核心理念：**Token 效率优先，用最小的上下文成本达到最好的开发效果**。
 
@@ -131,13 +131,13 @@ ln -s /path/to/my-opencode-deepseek-config/opencode ~/.config/opencode
 
 | 模型 | 用途 |
 | --- | --- |
-| `deepseek/deepseek-v4-pro` | 规划、架构、根因分析、代码审查、重型实现、主控调度 |
-| `deepseek/deepseek-v4-flash` | 快速探索、外部检索、轻量任务、简单编辑 |
+| `deepseek/deepseek-v4-pro` | 深度推理、根因分析、代码审查、重型多文件实现 |
+| `deepseek/deepseek-v4-flash` | 编排/路由、规划、常规实现、咨询、UI、探索、外部检索、轻量编辑、标题/摘要/压缩 |
 
 ### 路由策略
 
-- **Flash 优先**：搜索、查找、简单编辑等明确定义的任务优先走 flash agent
-- **Pro 专注推理**：规划、分析、审查、复杂实现——只用 pro
+- **Flash 优先**：路由、搜索、规划、常规实现、咨询、UI、探索等明确定义的任务优先走 flash agent
+- **Pro 专注推理**：深度推理、根因分析、代码审查、重型多文件实现——只用 pro
 - **自动升级**：flash agent 无法胜任时自动升级到 pro（带完整上下文）
 
 ## Agent 结构
@@ -146,18 +146,18 @@ ln -s /path/to/my-opencode-deepseek-config/opencode ~/.config/opencode
 
 | Agent | 模型 | 作用 |
 | --- | --- | --- |
-| `orchestrator` | v4-pro | 默认入口：意图门控（Intent Gate）+ 模型感知路由 + 后备链 |
+| `orchestrator` | v4-flash | 默认入口：意图门控（Intent Gate）+ 模型感知路由 + 后备链 |
 
 ### Subagents
 
 | Agent | 模型 | 权限 | 作用 |
 | --- | --- | --- | --- |
-| `planner` | v4-pro | 读写 | 规划、架构、拆解任务 |
+| `planner` | v4-flash | 读写 | 规划、架构、拆解任务 |
 | `deep-worker` | v4-pro | 读写 | 重型实现、多文件改动、复杂调试 |
 | `oracle` | v4-pro | **只读** | 根因分析、深度理解代码 |
 | `reviewer` | v4-pro | **只读** | 双轴代码审查（规范 + 规约）+ 严重度校准 |
-| `ui-builder` | v4-pro | 读写 | 前端与 UI 相关任务 |
-| `consultant` | v4-pro | 读写 | 方案讨论、最佳实践建议 |
+| `ui-builder` | v4-flash | 读写 | 前端与 UI 相关任务 |
+| `consultant` | v4-flash | 读写 | 方案讨论、最佳实践建议 |
 | `explore` | v4-flash | **只读** | 代码库搜索、并行探索 |
 | `librarian` | v4-flash | **只读** | 文档检索、Web 搜索 |
 | `light-orchestrator` | v4-flash | 读写 | 轻量任务、单文件编辑 |
@@ -264,12 +264,12 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 ├── opencode/                     # OpenCode 配置目录（可独立部署）
 │   ├── agents/                   # 10 个专职 Agent
 │   │   ├── orchestrator.md       # 主入口：意图门控 + 模型感知路由
-│   │   ├── planner.md            # pro：架构与规划
+│   │   ├── planner.md            # flash：架构与规划
 │   │   ├── deep-worker.md        # pro：重型实现
 │   │   ├── oracle.md             # pro：深度代码分析（只读）
 │   │   ├── reviewer.md           # pro：双轴代码审查（只读）
-│   │   ├── consultant.md         # pro：方案讨论与建议
-│   │   ├── ui-builder.md         # pro：前端与 UI
+│   │   ├── consultant.md         # flash：方案讨论与建议
+│   │   ├── ui-builder.md         # flash：前端与 UI
 │   │   ├── explore.md            # flash：代码库搜索（只读）
 │   │   ├── librarian.md          # flash：外部检索（只读）
 │   │   └── light-orchestrator.md # flash：简单编辑
@@ -301,8 +301,8 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 │   ├── AGENTS.md                 # 全局规则
 │   └── dcp.jsonc                 # DCP 上下文压缩（DeepSeek 128K，60%/30% 百分比阈值）
 ├── README.md
-├── LICENSE
-└── README.*.md                   # 其他语言 README
+├── README.en-US.md
+└── LICENSE
 ```
 
 ## 使用指南
@@ -354,11 +354,11 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 ## 设计哲学
 
 - **纯配置驱动，零额外依赖** —— 所有能力由 `opencode.jsonc` + `agents/*.md` + `skills/*/SKILL.md` + `AGENTS.md` 实现
-- **DeepSeek V4 双模型极致利用** —— Pro 做推理与决策，Flash 做查询与轻量执行
+- **DeepSeek V4 双模型极致利用** —— Pro 做深度推理与重型实现，Flash 做路由、规划与常规执行
 - **Token 效率优先** —— 路径引用替代粘贴文件、技能按需加载、压缩分级管理
 - **插件增效但不喧宾夺主** —— superpowers 提供过程纪律，DCP（dcp.jsonc）主动去重+压缩阈值，内置 compaction（opencode.jsonc）自动触发+prune 兜底
 - **执行与探索分离** —— deep-worker/light-orchestrator 禁止研究/委托，explore/librarian 禁止修改
-- **缓存与 thinking 纪律** —— 静态前缀稳定以命中 DeepSeek 提示词缓存；编码任务 0 温度；thinking 仅对推理任务开启，简单/检索任务关闭
+- **缓存与 thinking 纪律** —— 静态前缀稳定以命中 DeepSeek 提示词缓存；编码任务 0 温度；thinking 强度按 agent 通过 frontmatter `variant` 键分级（low/medium/high/max，无 off 档，v4 始终推理）
 - **Scope First + Delegate Always** —— 先定范围（2+ 步/多文件/架构变更先走 planner），再委派执行，顶层 token 只留给路由与难题
 - **原子 TODO** —— 多步任务先写有序 TODO，逐条 in_progress→completed；格式 `path: action for scenario — verify by check`
 - **持续改进** —— reflect 机制化发现摩擦、code-review 双轴校准保证质量
