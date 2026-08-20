@@ -1,15 +1,16 @@
 ---
 name: code-review
-description: Token-frugal, multi-dimension code review for a diff/branch/PR. Use when reviewing changes, checking a PR, running a review→fix loop, or the task mentions "code review", "review my changes", "review this PR", "找 bug", "审查代码". Reports findings by dimension and severity; never rewrites code unless asked.
+description: Lightweight single-pass code review for a diff/branch/PR. Use when reviewing changes, checking a PR, or the task mentions "code review", "review my changes", "review this PR", "找 bug", "审查代码". Reports blockers (critical/major) and notes (minor/nit) with evidence; never rewrites code.
 ---
 
 # Code Review
 
-A structured, token-frugal review discipline: one pass covers all dimensions,
-depth scales to diff size, and large reviews communicate through files instead
-of context. Pair with `security-review` when the diff touches a trust boundary.
+## Overview
 
-## Step 0 — Scope by *effective* size, not raw lines
+A single-pass review: one pass covers all dimensions, depth scales to effective
+size. Pair with `security-review` only when the diff touches a trust boundary.
+
+## Scope by *effective* size, not raw lines
 
 Establish the change set before reading code:
 
@@ -32,7 +33,7 @@ Pick the path from effective size **and** stakes:
 | Condition | Path | Behavior |
 | --- | --- | --- |
 | **≤ 8 logic files and ≤ 300 effective lines** | **Abbreviated** (default) | Single focused pass over the diff and its immediate callers. Report inline. |
-| **larger** | **Full** | Walk each dimension deliberately; write findings to a file (see below). |
+| **larger** | **Full** | Walk each dimension deliberately. |
 
 **High-stakes override** — route **Full** regardless of size when any changed
 logic/config file matches: `auth|authz|migration|schema|lock|concurr|public api|
@@ -46,52 +47,28 @@ outside the blast radius — not pre-existing unchanged code, not unrelated file
 ADRs and other historical decision documents are records, not living specs: do
 not flag them stale.
 
-## Review dimensions (dual-axis)
+## Review dimensions
 
-Dispatch TWO parallel passes covering all dimensions the diff touches. Skip
-dimensions with no relevant changes — don't pad.
-
-### Standards axis — style, naming, structure, comments, imports, error handling
-
-Check against AGENTS.md Anti-Patterns and Code Style rules:
-
-1. **Maintainability** — naming (no catch-all files, descriptive filenames, no
-   import aliases), function size, magic numbers, duplicated logic, convention
-   drift, no wildcard imports, no commented-out code.
-2. **Docs & comments** — why not what, no AI filler words, no emoji, no stale
-   docs. Enforce AGENTS.md Comment Discipline and Anti-Patterns.
-3. **Compatibility** — breaking API/signature changes, altered public contracts,
-   changed defaults, DB/schema migrations, callers left unupdated.
-
-### Spec axis — correctness, boundaries, security, performance
-
-Check against the stated task/feature requirements:
+One pass covering all dimensions the diff touches. Skip dimensions with no
+relevant changes — don't pad.
 
 1. **Correctness** — logic bugs, off-by-one, null/undefined, unhandled edge
    cases, error paths. No empty catch, no `@ts-ignore` without comment.
 2. **Security** — injection, XSS, authz/authn gaps, secrets, path traversal,
    SSRF, unsafe deserialization.
-3. **Performance** — N+1 queries, unbounded loops/allocations, blocking calls
+3. **Compatibility** — breaking API/signature changes, altered public contracts,
+   changed defaults, DB/schema migrations, callers left unupdated.
+4. **Maintainability** — naming (no catch-all files, descriptive filenames, no
+   import aliases), function size, magic numbers, duplicated logic, convention
+   drift, no wildcard imports, no commented-out code.
+5. **Docs & comments** — why not what, no AI filler words, no emoji, no stale
+   docs. Enforce AGENTS.md Comment Discipline and Anti-Patterns.
+6. **Performance** — N+1 queries, unbounded loops/allocations, blocking calls
    on hot paths, missing pagination/timeouts, leaks.
-4. **Architecture** — inappropriate coupling, leaky abstractions, wrong-layer
+7. **Architecture** — inappropriate coupling, leaky abstractions, wrong-layer
    responsibility, needless complexity, race conditions (if applicable).
-
-Run both passes concurrently. After both complete, merge: deduplicate (same
-issue found by both), sort by severity, tag each finding with its axis source.
-A finding reported independently by both axes is highest confidence — tag it
-`highest-confidence`.
-
-### Mechanical scan (before dimension review)
-
-Quick scan before the dual-axis passes:
-
-- **Duplicates:** 6+ identical lines in 2+ places within diff → flag as copy-paste.
-- **Pattern drift:** new code doesn't follow adjacent patterns (naming, error
-  handling, file structure) → flag deviation.
-- **Naming mismatch:** new identifiers use different terms for same concept → flag.
-- **Dead imports:** new import with no usage in added code → flag.
-
-Report mechanical findings in one block before the dimensional review.
+8. **Mechanical scan** — 6+ identical lines in 2+ places (copy-paste); pattern
+   drift; naming mismatch; dead imports.
 
 Before reporting, silently verify: read every changed file end-to-end; check
 unused imports, leftover TODOs, debug prints; confirm new functions have callers.
@@ -107,168 +84,68 @@ unused imports, leftover TODOs, debug prints; confirm new functions have callers
 Assign only the level the evidence supports — when in doubt, go one level down,
 never up.
 
-## Severity calibration (fight inflation)
+## Under-claim + suppress known-design noise
 
-Judge impact in context against the project's actual threat model and conventions.
-Read `package.json` or equivalent to detect project stage (v0.x vs v1+), deployment
-model (localhost tool? public service? internal tool? library?), and repo visibility.
+Assign only the level the evidence supports — when in doubt, go one level down,
+never up. Treat documented decisions (caller context note, `AGENTS.md`/`CLAUDE.md`)
+as intentional; flag only when concretely unsafe.
 
-- Read AGENTS.md (and CLAUDE.md if present) for stated context, threat model, and
-  conventions before assigning severity.
-- Apply these heuristics:
-  - **v0.x projects**: API stability/compatibility findings → minor at most
-    (semver expects breaking changes).
-  - **Localhost-only tools**: auth/network attack surface → minor (documented
-    constraint).
-  - **Internal tools**: external attack vectors → minor.
-  - **v1+ public libraries**: API breaks, unvalidated input → critical/major.
-- Down-rank findings that don't apply to this project's reality. Note the
-  calibration reason.
-- Prefer one accurate high-severity finding over ten inflated ones.
-- If a whole category consistently doesn't apply here, say so once and suggest
-  recording it in AGENTS.md.
-- **Standing downgrades** — apply the downgrade and cite the reason in the report:
-  - localhost-only auth/credential issues → **low** at most (no external exposure);
-  - `console.log` in a CLI tool → **nit** (CLI output is intentional user-facing logging);
-  - hardcoded API key in dev/test config → **minor** (dev-only, not deployed).
-- When stage / deployment model / threat model are unknown, prefer the lower
-  severity — under-claim rather than over-claim.
+## Approval gate
 
-### Suppress known-design noise
-
-Treat documented decisions (from caller's context note, `.opencode/decisions.md`,
-or `AGENTS.md`/`CLAUDE.md`) as intentional. Flag only when the diff makes a
-documented choice concretely unsafe.
-
-## Validator pass (before output)
-
-Default to **rejection** — every finding must survive scrutiny. For **each**
-finding, write one counter-argument first ("it only fires on admin paths / input
-is validated upstream at line M / the failing case is unreachable here"). If the
-counter is as strong as or stronger than the finding, discard it; if the evidence
-can't settle the matter, downgrade or delete rather than report it unconfirmed.
-
-Then verify the surviving findings against these gates:
-
-1. **Falsifiability** — the counter-argument must be resolvable with evidence,
-   not hand-waving. A finding that survives no concrete challenge is a guess.
-2. **Severity** — would this hold under a second reviewer? Downgrade if unsure;
-   only claim the level the evidence supports, never raise on a hunch.
-3. **Preference vs defect** — style opinions the project doesn't enforce are not
-   review items.
-4. **Evidence** — the citation must be correct and inside the diff's blast radius.
-
-This pass discards **disproved** findings outright: wrong `file:line`, code
-outside the blast radius, pre-existing unchanged code, severity beyond the
-threat model, style opinions stated as defects, duplicates, or documented
-intentional decisions.
+APPROVE unless you can cite a specific requirement the diff fails, with
+evidence. A requirement is the diff's stated purpose, an AGENTS.md rule, or a
+concrete broken behavior you can point at. A gap you cannot tie to such a
+criterion is a NOTE (minor/nit), not a blocker. Blockers are `critical` and
+`major` only. Omit issues a green gate (CI/lint/typecheck) already enforces.
+Under-claim: when in doubt go one severity level down, never up. A short
+review with one substantiated blocker beats a long list of nits.
 
 ## Report format
 
 Lead with a one-line severity summary:
-`critical: N | major: N | minor: N | nit: N` and the path taken (abbreviated/full).
+
+```
+critical: N | major: N | minor: N | nit: N  (path: abbreviated|full, effective size N lines)
+```
 
 Then list findings, ordered by severity, each as:
 
 ```
-[severity] <title>  (dimension, class: confirmed|plausible)
-<!-- id: <12-char-hash> -->  (SHA-256 of file:line:title, for loop dedup)
+[severity] <title>
 location: path/to/file.ext:LINE
 issue:  <what is wrong and the input/condition that triggers it>
 impact: <what breaks, or what an attacker/user gains>
-fix:    <the minimal concrete remediation a flash agent could apply>
+evidence: <the specific code/logic proving it — or why this is a NOTE not a blocker>
+fix:    <minimal concrete remediation>
 ```
 
-Classify each finding: **confirmed** (verified at the cited line, severity
-proportionate) or **plausible** (likely but not fully traced). Lead with
-confirmed findings within each severity level. **trivial** findings (real but
-cosmetic) go to Document Drift, not the main list.
+Close with a one-line merge-ready/blocking assessment. If the change is
+genuinely clean, say so plainly in one line — do not manufacture findings.
 
-Close with a short overall assessment (merge-ready? blocking items?).
+## Size discipline
 
-### What Looks Good
-
-A required section naming the parts that are solid. If the change is genuinely
-clean, say so plainly — do not manufacture findings.
-
-### Points of Agreement
-
-List where the review and the change's intent align — design choices, edge cases
-handled, or patterns correctly applied. Mark the strongest agreements
-`highest-confidence` (the same tag used for dual-axis findings), signaling what
-to preserve rather than "fix" in a follow-up.
-
-### Doc drift batching
-
-A required section: non-critical documentation findings are batched into a single
-`## Document Drift` section as a checklist, not scattered across the report.
-Route **trivial** findings here too. Only surface a docs finding as its own entry
-when it is genuinely dangerous (a false claim that could cause API misuse, a
-security-critical misleading comment).
-
-### Large reviews — communicate through files
-
-On the Full path, write the findings block to a file (e.g.
-`.opencode/review-<short-ref>.md`) and return only the severity summary plus the
-file path to the caller. This keeps large review content out of the
-orchestrator's context — the single biggest review token cost.
-
-**Response contract for file-based reviews:** after writing the file, your reply
-is *only* the summary line + the absolute path — nothing else.
+A ~200-line PR gets a real review; a ~2000-line PR gets a rubber stamp. Depth
+scales to effective size — don't fake thoroughness.
 
 ## Review → fix loop
 
-When asked to review *and fix* (e.g. `/review-loop`), run a bounded loop:
+The reviewer never fixes code (read-only). When a fix is requested, the
+orchestrator runs a bounded loop:
 
-1. Review the current diff (scope + dimensions + severity as above).
-2. If no findings above `nit`, stop — report clean.
-3. Apply the minimal fixes for `critical`/`major` findings (and clear `minor`
-   ones). Follow AGENTS.md; keep changes surgical.
-4. **Verify**: run the project's format/lint/test commands. Discover them from
-   `AGENTS.md` first, else infer from the repo (`package.json` scripts,
-   `Makefile`, `mise.toml`, `cargo`, `ruff`, etc.). If none exist, state that
-   verification was skipped.
-5. Re-review only the changed region. Repeat.
-
-Classify each re-review finding as **NEW**, **RECURRING** (unresolved from last
-pass), or **REGRESSION** (reintroduced by a fix). On iterations 2+, prepend a
-`## Prior Findings` block listing findings from the previous pass (with their
-IDs). Do NOT re-report a prior finding unless it is a REGRESSION.
-
-Stop by novelty and hard cap:
-
-- **Clean**: no critical/major findings remain.
-- **Converging + clean enough**: only minor/nit and 0 NEW in the last round — surface to the user.
-- **Deadlocked**: same RECURRING findings 2+ rounds despite fixes — the fix approach is wrong; pause and re-assess.
-- **Diverging**: regressions being introduced — stop immediately, report.
-- **Hard cap**: 5 iterations maximum — force-stop and report.
-
-Track iteration count and novelty at each round. Report:
-`Round N: NEW=X, RECURRING=Y, REGRESSION=Z, severity: critical=A, major=B. Verdict: [converging|deadlocked|diverging|clean]. Next: [continue|stop|re-assess]`
+1. Reviewer reports blockers (critical/major) + notes.
+2. If blockers: deep-worker fixes only criterion-cited blockers, delta-only.
+3. Fresh one-shot reviewer re-reviews only the delta diff. At most 2 re-reviews.
+4. Budget exhausted or clean → surface remaining risk to the user; never
+   reopen accepted/resolved concerns.
 
 ## Posting to a PR
 
-To publish findings on GitHub (e.g. `/review-pr`), load the `gh-cli` skill.
-`gh pr review` posts only a top-level verdict; per-line comments require the
-REST API — see the `gh-cli` skill ("Reviewing PRs" section) for the `gh api`
-pattern. Use `event=COMMENT` (never auto-`APPROVE`). Line numbers must be the
-**new-side** line inside a changed hunk.
-
-Place each finding at the tightest scope its location allows (3-tier placement):
-
-1. **Line comment** — the finding's `file:line` falls inside a changed hunk.
-2. **File-level comment** — the file is in the diff but the line is outside any
-   hunk.
-3. **Review body** — the finding is about a file not in the diff at all.
-
-**Re-review dedup:** embed a stable finding id (`<!-- cr:auth-nullcheck-L42 -->`)
-in each comment body. On later passes, list existing review comments (`gh pr view
-<n> --json comments` or `gh api`), match by id, and update in place. Add only new
-findings; resolve or note ones the diff has since fixed.
+To publish findings (e.g. `/review-pr`), load the `gh-cli` skill — its
+'Reviewing PRs' section is the single source of truth. Never auto-`APPROVE`.
 
 ## Rules
 
-- Report findings; do not modify code unless in loop mode.
+- Report findings; do not modify code.
 - Review the diff and blast radius first; widen only when needed.
 - Follow AGENTS.md quality and comment rules.
 - Cite concrete `file:line` locations.

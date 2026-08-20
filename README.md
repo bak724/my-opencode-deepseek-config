@@ -155,7 +155,7 @@ ln -s /path/to/my-opencode-deepseek-config/opencode ~/.config/opencode
 | `planner` | v4-flash | 读写 | 规划、架构、拆解任务 |
 | `deep-worker` | v4-pro | 读写 | 重型实现、多文件改动、复杂调试 |
 | `oracle` | v4-pro | **只读** | 根因分析、深度理解代码 |
-| `reviewer` | v4-pro | **只读** | 双轴代码审查（规范 + 规约）+ 严重度校准 |
+| `reviewer` | v4-pro | **只读** | 单遍代码审查（证据门控） |
 | `ui-builder` | v4-flash | 读写 | 前端与 UI 相关任务 |
 | `consultant` | v4-flash | 读写 | 方案讨论、最佳实践建议 |
 | `explore` | v4-flash | **只读** | 代码库搜索、并行探索 |
@@ -175,7 +175,7 @@ ln -s /path/to/my-opencode-deepseek-config/opencode ~/.config/opencode
 | `/deep` | `deep-worker` | 重型实现、多文件改动 |
 | `/quick` | `light-orchestrator` | 轻量任务、单文件编辑 |
 | `/ui` | `ui-builder` | 前端/UI 工作 |
-| `/review` | `reviewer`（code-review） | 双轴并行审查（规范+规约）+ 严重度校准 |
+| `/review` | `reviewer`（code-review） | 轻量单遍审查 + 证据门控 |
 | `/review-pr` | `reviewer`（code-review + gh-cli） | 审查 PR 并回帖到 GitHub |
 | `/plan` | `planner` | 制定计划、技术方案 |
 | `/search` | `librarian` | 外部搜索、查文档 |
@@ -212,7 +212,7 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 
 | Skill | 作用 |
 | --- | --- |
-| `code-review` | 省 token 多维代码审查：按维度+严重度分级报告，一致点标最高置信度，deepreview 自我证伪，从不擅自改码 |
+| `code-review` | 轻量单遍代码审查：证据门控，blockers（严重+主要）/notes（轻微/吹毛求疵），单源回帖，从不擅自改码 |
 | `codemap` | 生成带标注的仓库结构图，快速定向，节省探索 token |
 | `gh-cli` | GitHub CLI v2.97+ 参考：分页、仓库定位、discussions/projects/rulesets/skills、rate limit、gh-aw agentic CI、gh api 回退 |
 | `git-master` | 高级 Git 操作：rebase、squash、fixup、bisect、reflog、代码考古、worktree |
@@ -238,17 +238,17 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 
 ## 设计决策与迭代记录
 
-核心思路借鉴了 [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent)（意图门控、只读隔离、反模式）、[oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim)（调度器优先、后备链、拒绝契约、提示词缓存安全、impact×confidence÷cost）、[anomalyco/opencode](https://github.com/anomalyco/opencode)（配置 Schema、技能体系）、[cli/cli](https://github.com/cli/cli)（gh v2.97 命令集、rate limit、gh-aw）、[OpenSpec](https://github.com/Fission-AI/OpenSpec)（delta specs、OPSX 动作流 update/verify/四问）、[mattpocock/skills](https://github.com/mattpocock/skills)（冲突解析纪律、交接文档）、[pi](https://github.com/earendil-works/pi)（先答后改、精简响应、独立会话收集）和 [deepreview](https://github.com/mechanai/deepreview)（novelty 分类收敛、有效大小路由、Points of Agreement）的优点，纯配置实现，零额外依赖。
+核心思路借鉴了 [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent)（意图门控、只读隔离、反模式）、[oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim)（调度器优先、后备链、拒绝契约、提示词缓存安全、impact×confidence÷cost）、[anomalyco/opencode](https://github.com/anomalyco/opencode)（配置 Schema、技能体系）、[cli/cli](https://github.com/cli/cli)（gh v2.97 命令集、rate limit、gh-aw）、[OpenSpec](https://github.com/Fission-AI/OpenSpec)（delta specs、OPSX 动作流 update/verify/四问）、[mattpocock/skills](https://github.com/mattpocock/skills)（冲突解析纪律、交接文档）、[pi](https://github.com/earendil-works/pi)（先答后改、精简响应、独立会话收集）和 [deepreview](https://github.com/mechanai/deepreview)（有效大小路由）的优点，纯配置实现，零额外依赖。
 
 > **借鉴而非照搬**：过重的流水线只汲取轻量化设计理念；冗余功能由现有 agents/skills 覆盖，不新增。遵循"精简优先于新增"原则，每次迭代都以净减 token 为目标。
 >
-> **本轮（v28）机制来源**：DeepSeek 缓存+thinking 纪律、scope-first+委派优先、原子 TODO 下沉进 AGENTS.md；新增 5 技能（wait-what/writing-for-agents/to-questionnaire/research/wizard）至 23 个；gh-cli 增补 4 条 GHSA 安全条目；code-review 融入 deepreview 自我证伪；删除 .ai/calibration.yml（校准规则内联进 code-review）。
+> **本轮（v28）机制来源**：DeepSeek 缓存+thinking 纪律、scope-first+委派优先、原子 TODO 下沉进 AGENTS.md；新增 5 技能（wait-what/writing-for-agents/to-questionnaire/research/wizard）至 23 个；gh-cli 增补 4 条 GHSA 安全条目；删除 .ai/calibration.yml（校准规则内联进 code-review）。
 >
 > **评估后未采用**：mattpocock/skills 的其余流程类技能（code-review、tdd、implement 等与 superpowers/现有技能重叠）；superpowers 无配置旋钮，保持插件字符串形式注入。
 
 ### 迭代里程碑
 
-自 v1 以来历经 28 次迭代，持续对标上游仓库最佳实践：
+自 v1 以来历经 29 次迭代，持续对标上游仓库最佳实践：
 
 - **v1-v7（奠基）**：双模型绑定、Agent 角色体系、意图门控路由、AGENTS.md 全局规则、Skills 目录、权限基线
 - **v8-v15（审查+规约+契约）**：code-review 双轴校准、spec-workflow、gh-cli 对齐、拒绝契约、后台核查
@@ -257,6 +257,7 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 - **v26（本轮瘦身）**：prune:true 与 tool_output 800/20480 收紧、DCP 切换 60%/30% 百分比阈值、grilling 引入替代 writing-great-skills、opencode-config 131→64 精简、code-review 分级+validator、gh-cli 补 gh status、AGENTS.md 增 User Override、orchestrator 委托成本纪律、7 个 agent 文件净减 22 行
 - **v27（删除/迁移/新增）**：删 batch_tool 死配置、只读 agent 无效 `write: deny`、bash 3 条冗余；Context Management 段迁入 orchestrator 专属小节；只读 agent bash 白名单、read 补 `.env`；新增 tech-debt-audit 技能；15 条技能 description 瘦身 30-40%；gh-cli 补 rate limit/gh skill 宿主/gh-aw 等 5 点、code-review 增 Points of Agreement、spec-workflow 补 update 两问、orchestrator 增独立会话收集+提示词缓存安全、deep-worker 增 impact×confidence÷cost
 - **v28（纪律重构）**：缓存+thinking 纪律、scope-first+委派优先、原子 TODO 下沉 AGENTS.md；新增 5 技能至 23 个；gh-cli 补 4 条 GHSA；code-review 融入 deepreview 自我证伪；删除 .ai/calibration.yml（规则内联进 code-review）；README 十语种同步
+- **v29（审查瘦身）**：code-review 275→152 单遍化；删除 consensus/validator/严重度校准/SHA-id/Points of Agreement；证据门控审批；修复循环改由 orchestrator 拥有（无 /review-loop）；PR 回帖知识并入 gh-cli；reviewer 去掉 temperature 与 "enhanced" 表述；security-review 严重度对齐
 
 ## 仓库结构
 
@@ -267,14 +268,14 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 │   │   ├── planner.md            # flash：架构与规划
 │   │   ├── deep-worker.md        # pro：重型实现
 │   │   ├── oracle.md             # pro：深度代码分析（只读）
-│   │   ├── reviewer.md           # pro：双轴代码审查（只读）
+│   │   ├── reviewer.md           # pro：单遍代码审查（只读）
 │   │   ├── consultant.md         # flash：方案讨论与建议
 │   │   ├── ui-builder.md         # flash：前端与 UI
 │   │   ├── explore.md            # flash：代码库搜索（只读）
 │   │   ├── librarian.md          # flash：外部检索（只读）
 │   │   └── light-orchestrator.md # flash：简单编辑
 │   ├── skills/                   # 23 个按需加载技能
-│   │   ├── code-review/          # 双轴并行审查 + 严重度校准
+│   │   ├── code-review/          # 轻量单遍审查 + 证据门控
 │   │   ├── codemap/              # 生成仓库结构图
 │   │   ├── gh-cli/               # GitHub CLI v2.97+ 参考 + 安全警告
 │   │   ├── git-master/           # 高级 Git 操作
@@ -348,7 +349,7 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 **代码审查：**
 ```text
 /review-pr   ← 审查 PR + 自动回帖
-/review      ← 双轴并行审查
+/review      ← 轻量单遍审查
 ```
 
 ## 设计哲学
@@ -361,4 +362,4 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 - **缓存与 thinking 纪律** —— 静态前缀稳定以命中 DeepSeek 提示词缓存；编码任务 0 温度；thinking 强度按 agent 通过 frontmatter `variant` 键分级（low/medium/high/max，无 off 档，v4 始终推理）
 - **Scope First + Delegate Always** —— 先定范围（2+ 步/多文件/架构变更先走 planner），再委派执行，顶层 token 只留给路由与难题
 - **原子 TODO** —— 多步任务先写有序 TODO，逐条 in_progress→completed；格式 `path: action for scenario — verify by check`
-- **持续改进** —— reflect 机制化发现摩擦、code-review 双轴校准保证质量
+- **持续改进** —— reflect 机制化发现摩擦、code-review 证据门控保证质量

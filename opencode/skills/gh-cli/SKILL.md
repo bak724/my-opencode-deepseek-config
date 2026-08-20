@@ -268,6 +268,11 @@ gh api repos/{owner}/{repo}/pulls/<n>/reviews --method POST \
 `event`: `APPROVE` | `REQUEST_CHANGES` | `COMMENT`, or omit for a `PENDING`
 draft. Never auto-`APPROVE` from an agent — leave the verdict to a human.
 
+Place each finding at the tightest scope its location allows: line comment
+(inside a changed hunk), file-level comment (file in the diff, line outside a
+hunk), or review body (file not in the diff). Line numbers must be the new-side
+line inside a changed hunk.
+
 ## `gh api` — the universal fallback
 
 When no porcelain command covers what you need:

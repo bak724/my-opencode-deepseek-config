@@ -155,7 +155,7 @@ This repo strictly divides work between the two DeepSeek V4 models — no other 
 | `planner` | v4-flash | read-write | Planning, architecture, task breakdown |
 | `deep-worker` | v4-pro | read-write | Heavy implementation, multi-file changes, complex debugging |
 | `oracle` | v4-pro | **read-only** | Root-cause analysis, deep code understanding |
-| `reviewer` | v4-pro | **read-only** | Two-axis code review (conventions + specs) + severity calibration |
+| `reviewer` | v4-pro | **read-only** | Single-pass code review (evidence-gated) |
 | `ui-builder` | v4-flash | read-write | Frontend and UI tasks |
 | `consultant` | v4-flash | read-write | Approach discussions, best-practice advice |
 | `explore` | v4-flash | **read-only** | Codebase search, parallel exploration |
@@ -175,7 +175,7 @@ This repo strictly divides work between the two DeepSeek V4 models — no other 
 | `/deep` | `deep-worker` | Heavy implementation, multi-file changes |
 | `/quick` | `light-orchestrator` | Lightweight tasks, single-file edits |
 | `/ui` | `ui-builder` | Frontend/UI work |
-| `/review` | `reviewer` (code-review) | Two-axis parallel review (conventions + specs) + severity calibration |
+| `/review` | `reviewer` (code-review) | Lightweight single-pass review + evidence gating |
 | `/review-pr` | `reviewer` (code-review + gh-cli) | Review a PR and post the result to GitHub |
 | `/plan` | `planner` | Create plans and technical proposals |
 | `/search` | `librarian` | External search, documentation lookup |
@@ -212,7 +212,7 @@ OpenCode exposes skills on demand via the native `skill` tool — agents load th
 
 | Skill | Purpose |
 | --- | --- |
-| `code-review` | Token-frugal, multi-dimensional code review: reports by dimension + severity, highest confidence on consensus points, deepreview self-falsification, never rewrites code unasked |
+| `code-review` | Lightweight single-pass code review: evidence gating, blockers (critical/major) vs notes (minor/nit), single-source PR posting, never rewrites code |
 | `codemap` | Generates an annotated repository structure map for quick orientation, saving exploration tokens |
 | `gh-cli` | GitHub CLI v2.97+ reference: pagination, repo targeting, discussions/projects/rulesets/skills, rate limits, gh-aw agentic CI, gh api fallback |
 | `git-master` | Advanced Git operations: rebase, squash, fixup, bisect, reflog, code archaeology, worktrees |
@@ -238,17 +238,17 @@ OpenCode exposes skills on demand via the native `skill` tool — agents load th
 
 ## Design Decisions & Iteration Log
 
-The core ideas draw on [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent) (intent gating, read-only isolation, anti-patterns), [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim) (dispatcher-first, fallback chains, rejection contract, prompt-cache safety, impact×confidence÷cost), [anomalyco/opencode](https://github.com/anomalyco/opencode) (config schema, skill system), [cli/cli](https://github.com/cli/cli) (gh v2.97 command set, rate limits, gh-aw), [OpenSpec](https://github.com/Fission-AI/OpenSpec) (delta specs, OPSX action flow update/verify/four questions), [mattpocock/skills](https://github.com/mattpocock/skills) (conflict resolution discipline, handoff documents), [pi](https://github.com/earendil-works/pi) (answer first then act, terse responses, independent session collection), and [deepreview](https://github.com/mechanai/deepreview) (novelty classification convergence, effective-size routing, Points of Agreement) — pure config, zero extra dependencies.
+The core ideas draw on [oh-my-openagent](https://github.com/code-yeongyu/oh-my-openagent) (intent gating, read-only isolation, anti-patterns), [oh-my-opencode-slim](https://github.com/alvinunreal/oh-my-opencode-slim) (dispatcher-first, fallback chains, rejection contract, prompt-cache safety, impact×confidence÷cost), [anomalyco/opencode](https://github.com/anomalyco/opencode) (config schema, skill system), [cli/cli](https://github.com/cli/cli) (gh v2.97 command set, rate limits, gh-aw), [OpenSpec](https://github.com/Fission-AI/OpenSpec) (delta specs, OPSX action flow update/verify/four questions), [mattpocock/skills](https://github.com/mattpocock/skills) (conflict resolution discipline, handoff documents), [pi](https://github.com/earendil-works/pi) (answer first then act, terse responses, independent session collection), and [deepreview](https://github.com/mechanai/deepreview) (effective-size routing) — pure config, zero extra dependencies.
 
 > **Borrow, don't copy**: from heavyweight pipelines we take only lightweight design ideas; redundant features are covered by existing agents/skills, so nothing new is added. Following the "simplify before adding" principle, every iteration targets net token reduction.
 >
-> **This round (v28) — mechanism sources**: DeepSeek cache + thinking discipline, scope-first + delegate-always, atomic TODOs pushed down into AGENTS.md; 5 new skills (wait-what/writing-for-agents/to-questionnaire/research/wizard) bringing the total to 23; gh-cli gains 4 GHSA security entries; code-review absorbs deepreview self-falsification; removed .ai/calibration.yml (calibration rules inlined into code-review).
+> **This round (v28) — mechanism sources**: DeepSeek cache + thinking discipline, scope-first + delegate-always, atomic TODOs pushed down into AGENTS.md; 5 new skills (wait-what/writing-for-agents/to-questionnaire/research/wizard) bringing the total to 23; gh-cli gains 4 GHSA security entries; removed .ai/calibration.yml (calibration rules inlined into code-review).
 >
 > **Evaluated and rejected**: the remaining process skills from mattpocock/skills (code-review, tdd, implement, etc. — they overlap with superpowers/existing skills); superpowers has no config knobs, so it remains injected as a plugin string.
 
 ### Iteration Milestones
 
-28 iterations since v1, continuously benchmarking best practices from upstream repositories:
+29 iterations since v1, continuously benchmarking best practices from upstream repositories:
 
 - **v1-v7 (foundation)**: dual-model binding, agent role system, intent-gate routing, AGENTS.md global rules, skills directory, permission baseline
 - **v8-v15 (review + specs + contract)**: code-review two-axis calibration, spec-workflow, gh-cli alignment, rejection contract, background verification
@@ -257,6 +257,7 @@ The core ideas draw on [oh-my-openagent](https://github.com/code-yeongyu/oh-my-o
 - **v26 (this round's slimming)**: prune:true and tool_output tightened to 800/20480, DCP switched to 60%/30% percentage thresholds, grilling introduced replacing writing-great-skills, opencode-config slimmed 131→64, code-review grading + validator, gh-cli adds gh status, AGENTS.md adds User Override, orchestrator delegation cost discipline, 7 agent files net -22 lines
 - **v27 (delete/migrate/add)**: deleted batch_tool dead config, read-only agents' ineffective `write: deny`, 3 redundant bash rules; Context Management section moved into an orchestrator-specific subsection; read-only agent bash allowlist, read adds `.env`; added the tech-debt-audit skill; 15 skill descriptions slimmed 30-40%; gh-cli adds rate limits/gh skill host/gh-aw (5 points), code-review adds Points of Agreement, spec-workflow adds two update questions, orchestrator adds independent session collection + prompt-cache safety, deep-worker adds impact×confidence÷cost
 - **v28 (discipline refactor)**: cache + thinking discipline, scope-first + delegate-always, atomic TODOs pushed down to AGENTS.md; 5 new skills → 23 total; gh-cli adds 4 GHSA entries; code-review absorbs deepreview self-falsification; removed .ai/calibration.yml (rules inlined into code-review); README synced across ten languages
+- **v29 (review slimming)**: code-review 275→152 single-pass; removed consensus/validator/calibration/SHA-ids/Points of Agreement; evidence-gated approval; fix loop now orchestrator-owned (no /review-loop); PR-posting knowledge merged into gh-cli; reviewer drops temperature + "enhanced" wording; security-review severity aligned
 
 ## Repository Structure
 
@@ -267,14 +268,14 @@ The core ideas draw on [oh-my-openagent](https://github.com/code-yeongyu/oh-my-o
 │   │   ├── planner.md            # flash: architecture & planning
 │   │   ├── deep-worker.md        # pro: heavy implementation
 │   │   ├── oracle.md             # pro: deep code analysis (read-only)
-│   │   ├── reviewer.md           # pro: dual-axis code review (read-only)
+│   │   ├── reviewer.md           # pro: single-pass code review (read-only)
 │   │   ├── consultant.md         # flash: solution discussion & advice
 │   │   ├── ui-builder.md         # flash: frontend & UI
 │   │   ├── explore.md            # flash: codebase search (read-only)
 │   │   ├── librarian.md          # flash: external retrieval (read-only)
 │   │   └── light-orchestrator.md # flash: simple editing
 │   ├── skills/                   # 23 on-demand skills
-│   │   ├── code-review/          # dual-axis parallel review + severity calibration
+│   │   ├── code-review/          # lightweight single-pass review + evidence gating
 │   │   ├── codemap/              # generates repository structure map
 │   │   ├── gh-cli/               # GitHub CLI v2.97+ reference + security advisory
 │   │   ├── git-master/           # advanced Git operations
@@ -348,7 +349,7 @@ Describe your needs in natural language; the Orchestrator analyzes intent and pi
 **Code review:**
 ```text
 /review-pr   ← review PR + auto-reply on GitHub
-/review      ← dual-axis parallel review
+/review      ← lightweight single-pass review
 ```
 
 ## Design Philosophy
@@ -361,4 +362,4 @@ Describe your needs in natural language; the Orchestrator analyzes intent and pi
 - **Cache + thinking discipline** — stable static prefixes to hit DeepSeek's prompt cache; temperature 0 for coding tasks; thinking effort set per-agent via the frontmatter `variant` key (low/medium/high/max, no off tier — v4 always reasons)
 - **Scope First + Delegate Always** — define scope first (2+ steps / multi-file / architecture changes go through planner), then delegate execution; top-level tokens are reserved for routing and hard problems
 - **Atomic TODOs** — multi-step tasks start with an ordered TODO list, one item in_progress → completed at a time; format `path: action for scenario — verify by check`
-- **Continuous improvement** — reflect mechanizes friction discovery, code-review's two-axis calibration guards quality
+- **Continuous improvement** — reflect mechanizes friction discovery, code-review's evidence gating guards quality

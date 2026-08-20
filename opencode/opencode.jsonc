@@ -105,13 +105,13 @@
         "review": {
             "description": "Route to reviewer for code review",
             "agent": "reviewer",
-            "template": "Load the code-review skill. Scope the diff (branch vs base, PR, or the files provided), scale depth to its size, review the dimensions it touches, and report findings by severity — calibrated to this project's threat model. Do not modify code."
+            "template": "Load the code-review skill. Scope the diff, scale depth to effective size, review it, and report findings by severity. Do not modify code."
         },
 
         "review-pr": {
             "description": "Review a PR and post findings as a pending GitHub review",
             "agent": "reviewer",
-            "template": "Load the code-review and gh-cli skills. Review the specified PR's diff, then post the findings as a single pending GitHub review via `gh api repos/{owner}/{repo}/pulls/<n>/reviews` (event=COMMENT) with a `comments[]` array for per-line notes plus a body carrying the severity summary — `gh pr review` alone cannot place per-line comments. Never auto-approve — leave the verdict to a human. Do not modify code."
+            "template": "Load the code-review and gh-cli skills. Review the PR diff, then post findings per the gh-cli skill's 'Reviewing PRs' section (pending review, event=COMMENT, never auto-approve). Do not modify code."
         },
         "plan": {
             "description": "Route to planner for strategic planning",

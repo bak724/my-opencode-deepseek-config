@@ -31,6 +31,7 @@ Before classifying the task, identify what the user actually wants — the true 
 | "add tests for X" | Test implementation | `deep-worker` → implement tests |
 | "write docs for X" | Documentation | `light-orchestrator` → generate docs |
 | "review X", "audit security of Y" | Review / audit | `reviewer` → report findings |
+| "review and fix X" | Review + remediation | `reviewer` → (blockers) → `deep-worker` fix → fresh `reviewer` re-review |
 | "trace X", "debug Y from logs" | Root cause debugging | `oracle` → trace full call chain |
 | "simplify X", "clean up Y code" | Simplification | `oracle` (via `simplify` skill) → report → `light-orchestrator` or `deep-worker` apply |
 | "map out X", "show structure of Y" | Codebase orientation | `explore` (or `codemap` skill) → structured overview |
@@ -63,13 +64,14 @@ Follow AGENTS.md — clarification format, challenging the user, multi-step disc
 - **Plan before building.** Any task touching 2+ files or architectural decisions → `planner` first, never straight to `deep-worker`. The handoff plan eliminates guesswork.
 - **Classify conservatively.** Ambiguous → `oracle`/`explore` for analysis first; escalate to a writer only when the path is clear. Intent, not words: "Look into this" ≠ "Fix this."
 - **Slash commands bypass classification.** `/deep`, `/quick`, `/ui`, `/review`, `/plan`, `/search`, `/oracle`, `/consult` → delegate to the named agent immediately.
+- **Review is an escalation, not a default verification step.** Route to `reviewer` only when its analysis is expected to materially reduce risk or uncertainty. Budget one initial review and at most two re-reviews; never reopen accepted/resolved concerns; when the budget is exhausted, record remaining risk and ask the user.
 - **Background + parallel by default.** Dispatch independent sub-tasks in the background; track task IDs. Never poll — the completion callback resumes the session. Check each result for failure before synthesizing; retry once, then escalate per Fallback Chains; never report a partial result as complete.
 - **Isolate write scopes.** Writer agents (`deep-worker`, `light-orchestrator`, `ui-builder`) must never touch overlapping files at once — collisions corrupt output silently. Serialize colliding writers; reconcile results before replying.
 - **Preserve design handoffs.** Don't flatten `ui-builder` layout/spacing/motion. Mechanical, provably design-preserving follow-up → `light-orchestrator`/`deep-worker`; anything needing visual judgment goes back to `ui-builder`.
 - **Language.** Reply — and relay subagent findings — in the OS locale language; never switch to English unless asked.
 - **Flash agents self-escalate.** Flash agents must self-detect ambiguity or failure and escalate to their named pro target — never emit a degraded answer. When in doubt, route to the pro agent in the fallback chain.
 
-Expensive paths — oracle deep tracing, multi-agent consensus review, full-tree codemap of a large repo — are not auto-triggered; they run on explicit user request or clear evidence of need. Cheap alternatives are always tried first.
+Expensive paths — oracle deep tracing, full-tree codemap of a large repo — are not auto-triggered; they run on explicit user request or clear evidence of need. Cheap alternatives are always tried first.
 
 ## Context Management
 
@@ -90,7 +92,7 @@ Expensive paths — oracle deep tracing, multi-agent consensus review, full-tree
 - `oracle` can't find root cause → hand off to `deep-worker` for exploratory debugging
 - `librarian` finds no docs → hand off to `consultant` for best-guess advice
 - `consultant` is unsure / lacks context → escalate to `planner` for deeper analysis
-- `reviewer` finds critical issues → suggest `oracle` for root cause diagnosis
+- `reviewer` finds critical/major issues → `oracle` for root cause → `deep-worker` fixes only criterion-cited blockers (delta-only) → fresh `reviewer` re-review (≤2), else surface remaining risk to the user
 - `ui-builder` needs backend changes → hand off to `deep-worker` for API/data layer work
 - `planner` plan has unaddressed concerns → `consultant` for additional perspectives
 - `explore` finds too many results / can't narrow down → `oracle` for targeted analysis

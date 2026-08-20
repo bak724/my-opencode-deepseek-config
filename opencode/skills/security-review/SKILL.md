@@ -54,10 +54,12 @@ code unless explicitly asked.
 
 ## Report format
 
+critical/major are blockers; minor/nit are suggestions.
+
 For each finding:
 
 ```
-[severity: high|medium|low] <title>
+[severity: critical|major|minor|nit] <title>
 location: path/to/file.ext:LINE
 issue: <what is wrong and the input that triggers it>
 impact: <what an attacker gains>
