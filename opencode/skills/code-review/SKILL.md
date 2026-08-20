@@ -47,6 +47,20 @@ outside the blast radius — not pre-existing unchanged code, not unrelated file
 ADRs and other historical decision documents are records, not living specs: do
 not flag them stale.
 
+## Large-diff two-axis split
+
+Default is the single pass above. Only when the effective diff is large
+(>~500 effective lines), split into two parallel axes and merge into one
+report — never a consensus loop:
+
+- **Standards axis** — style, naming, convention drift, AGENTS.md
+  Comment Discipline / Anti-Patterns, copy-paste, dead imports.
+- **Spec axis** — does the diff satisfy its stated requirements / referenced
+  spec / acceptance criteria?
+
+Run both axes over the same diff, merge findings under the one severity
+scheme below, and report once. Two passes, one verdict, no re-review loop.
+
 ## Review dimensions
 
 One pass covering all dimensions the diff touches. Skip dimensions with no

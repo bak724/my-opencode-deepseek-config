@@ -34,7 +34,6 @@ this file only covers this repository's local conventions.
 | `mode` | `primary` \| `subagent` |
 | `model` | `deepseek/deepseek-v4-pro` \| `deepseek/deepseek-v4-flash` |
 | `steps` | step budget; heavier agents get more |
-| `temperature` | 0.0–1.0; low = deterministic, high = ideation |
 | `color` | "#RRGGBB" |
 | `hidden` | optional: hide from @-menu |
 | `permission` | optional tool locks; read-only agents (`oracle`, `reviewer`, `explore`, `librarian`) must set `edit: deny` + read-only bash whitelist |

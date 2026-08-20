@@ -6,7 +6,6 @@
     "enabled_providers": ["deepseek"],
     "autoupdate": "notify",
     "share": "disabled",
-    "snapshot": true,
     "lsp": true,
     "formatter": true,
     "subagent_depth": 3,
@@ -48,6 +47,20 @@
     "instructions": [
         "AGENTS.md"
     ],
+    // DeepSeek thinking split (deepseek-harness official): flash disables
+    // thinking for cheapest+fastest runs; pro keeps the default (thinking on).
+    "provider": {
+        "deepseek": {
+            "models": {
+                "deepseek-v4-flash": {
+                    "options": {
+                        "temperature": 0,
+                        "thinking": { "type": "disabled" }
+                    }
+                }
+            }
+        }
+    },
     "references": {
         "opencode-docs": {
             "repository": "anomalyco/opencode",
@@ -56,16 +69,17 @@
         }
     },
     // Built-in utility agents (no .md file). Flash-first policy: build/plan/
-    // title/summary/compaction all run on flash; `variant` sets thinking effort.
-    // Pro stays the global default for safety, and heavy work escalates to
-    // deep-worker (pro). `fallback` is not a real schema key — omitted; OpenCode
-    // already falls back small_model -> model internally when a model is missing.
+    // title/summary/compaction all run on flash. Thinking is controlled at the
+    // provider layer (flash = disabled, pro = default), so no per-agent variant
+    // or temperature here. Pro stays the global default; heavy work escalates
+    // to deep-worker (pro). `fallback` is not a real schema key — omitted;
+    // OpenCode falls back small_model -> model internally.
     "agent": {
-        "build": { "model": "deepseek/deepseek-v4-flash", "mode": "subagent", "variant": "medium" },
-        "plan": { "model": "deepseek/deepseek-v4-flash", "variant": "high" },
-        "title": { "model": "deepseek/deepseek-v4-flash", "variant": "low" },
-        "summary": { "model": "deepseek/deepseek-v4-flash", "variant": "low" },
-        "compaction": { "model": "deepseek/deepseek-v4-flash", "variant": "low" }
+        "build": { "model": "deepseek/deepseek-v4-flash" },
+        "plan": { "model": "deepseek/deepseek-v4-flash" },
+        "title": { "model": "deepseek/deepseek-v4-flash" },
+        "summary": { "model": "deepseek/deepseek-v4-flash" },
+        "compaction": { "model": "deepseek/deepseek-v4-flash" }
     },
     // Trim only oversized tool outputs (full text still saved to disk, preview
     // returned). 800 lines / 20KB balances token savings against re-reads:

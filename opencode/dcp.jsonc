@@ -21,8 +21,7 @@
   },
 
   "commands": {
-    "enabled": true,
-    "protectedTools": []
+    "enabled": true
   },
 
   "experimental": {
@@ -33,7 +32,6 @@
 
   // 受保护文件模式：不裁剪这些文件的操作
   "protectedFilePatterns": [
-    "**/opencode.json",
     "**/opencode.jsonc",
     "**/AGENTS.md",
     "**/*.env*",
@@ -49,7 +47,7 @@
     // range 模式：将连续对话范围压缩为高保真摘要
     "mode": "range",
     "permission": "allow",
-    "showCompression": true,
+    "showCompression": false,
     // 摘要缓冲：压缩摘要 token 不计入 maxContextLimit，充分利用窗口
     "summaryBuffer": true,
 

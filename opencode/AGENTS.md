@@ -42,12 +42,14 @@ orchestrator prompt (`agents/orchestrator.md`).
   Append volatile content (timestamps, random IDs, dynamic file lists) near
   the END of the payload, never the head.
 - **Freeze toolsets.** Never reorder tool schemas or injected rules mid-session.
-- **Temperature.** Coding tasks: 0; with thinking on, don't set temperature/top_p (silently ignored).
-- **Thinking.** Off for simple/retrieval tasks (flash saves the most output
-  tokens); on for complex multi-step agent tasks. DeepSeek v4 thinking effort
-  is set per-agent via the frontmatter `variant` key (low/medium/high/max;
-  there is no off tier — v4 always reasons). Flash roles use low/medium; pro
-  roles use high.
+- **Temperature.** flash: 0 (thinking off). pro: unset — thinking is on and
+  temperature/top_p are silently ignored.
+- **Thinking.** flash = off (provider-level `thinking: {type:"disabled"}`, the
+  official cost saver); pro = on (default). Thinking is a provider/model-level
+  switch, not a per-agent frontmatter knob.
+- **One-shot requests ride flash.** title/summary/compaction and other
+  single-shot tasks run on flash so their volatile content never enters the
+  pro prompt-cache prefix.
 - **reasoning_content** must round-trip on tool calls (opencode handles it); never reorder messages in ways that break it.
 
 ## Scope First + Delegate Always
@@ -170,6 +172,9 @@ Before claiming any task complete:
    TODOs, or incomplete logic.
 2. Grep for broken callers of any function you changed.
 3. Run tests if they exist; otherwise state what manual verification you did.
+4. Plan the narrowest verification path before implementing — pick the cheapest
+   check (build / lint / unit / manual command) that proves the change; never
+   run the full suite just because files changed.
 
 Evidence precedes assertion — a passing build, clean lint, end-to-end read, or
 a grep showing no broken callers.

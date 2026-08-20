@@ -13,9 +13,9 @@
 - 会话分享：关闭（`share: "disabled"`）；快照：开启（`snapshot: true`）
 - 权限基线：默认放行，破坏性 bash 命令设为 `ask`；`.env` 类敏感文件 `deny`；外部目录 `ask`；只读 Agent 的 bash 白名单（默认 deny 全部 + 仅放行只读子命令）
 - 上下文压缩：内置 compaction（opencode.jsonc）管自动触发 + prune 裁旧工具输出，DCP（dcp.jsonc）管主动去重 + 压缩阈值，两者互补
-- 全局规则：`AGENTS.md`（核心原则、任务拒绝契约、自我验证、反模式等；上下文/Token 纪律已下沉到 `orchestrator`）
-- 技能：`skills/` 目录下 **23 个** `SKILL.md` 技能，通过原生 `skill` 工具按需加载
-- 插件：`superpowers`（v6.3.0，过程型技能）、`@tarquinen/opencode-dcp`（智能上下文裁剪）
+- 全局规则：`AGENTS.md`（核心原则、任务拒绝契约、自我验证、反模式等；上下文/Token 纪律在 `AGENTS.md`）
+- 技能：`skills/` 目录下 **24 个** `SKILL.md` 技能，通过原生 `skill` 工具按需加载
+- 插件：`superpowers`（git URL 跟踪 main 分支，过程型技能）、`@tarquinen/opencode-dcp`（智能上下文裁剪）
 
 ## DeepSeek 模型配置
 
@@ -54,15 +54,16 @@ opencode
 }
 ```
 
-如需为 Pro 模型启用 thinking/reasoning，可在 `provider` 中追加：
+本配置在 `provider` 层拆分 thinking：flash 关闭 thinking 并固定 `temperature: 0`（最快最省），pro 保持默认（thinking 开启）。示例（flash）：
 
 ```jsonc
 "provider": {
   "deepseek": {
     "models": {
-      "deepseek-v4-pro": {
+      "deepseek-v4-flash": {
         "options": {
-          "thinking": { "type": "enabled" }
+          "temperature": 0,
+          "thinking": { "type": "disabled" }
         }
       }
     }
@@ -212,9 +213,9 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 
 | Skill | 作用 |
 | --- | --- |
-| `code-review` | 轻量单遍代码审查：证据门控，blockers（严重+主要）/notes（轻微/吹毛求疵），单源回帖，从不擅自改码 |
+| `code-review` | 单遍代码审查 + 证据门控；大 diff（>~500 行）拆 Standards/Spec 两轴合并报告 |
 | `codemap` | 生成带标注的仓库结构图，快速定向，节省探索 token |
-| `gh-cli` | GitHub CLI v2.97+ 参考：分页、仓库定位、discussions/projects/rulesets/skills、rate limit、gh-aw agentic CI、gh api 回退 |
+| `gh-cli` | GitHub CLI v2.97+ 参考：PR 回帖、api、rate limit、gh pr checks、gh skill/gh-aw、GHSA 安全要点 |
 | `git-master` | 高级 Git 操作：rebase、squash、fixup、bisect、reflog、代码考古、worktree |
 | `git-release` | Tag 发布：发布说明、SemVer 推断、gh release 命令 |
 | `resolving-merge-conflicts` | 逐 hunk 解析合并冲突：追溯原始意图、永不发明新行为、永不 --abort |
@@ -225,8 +226,9 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 | `security-review` | 合并前安全审查（注入/XSS/SSRF/密钥/反序列化/路径穿越），只报不改 |
 | `shared-language` | 构建领域术语表（CONTEXT.md），大幅节省 token |
 | `simplify` | 行为保持的代码简化（oracle 分析 → 应用） |
-| `spec-workflow` | 轻量规约驱动变更：proposal → specs → design → tasks → archive |
-| `verification-planning` | 实现前规划最窄验证路径 |
+| `spec-workflow` | 轻量规约驱动变更：proposal → delta specs → tasks → update 三问决策树 → verify → archive |
+| `prototype` | 一次性原型回答设计问题：逻辑问题→单 HTML 交互演示；UI 问题→同路由多样式变体；当天一次性、一键可跑、无持久化 |
+| `wayfinder` | 超大工程迷雾期导航：decision-ticket 地图（research/prototype/grilling/task 四类 + blocking edges + frontier），本地 Markdown tracker，一次会话解析一个 ticket |
 | `verify-with-docs` | 编码前核对 API 文档，检索优先，防幻觉 |
 | `grilling` | 需求对齐访谈：一次一问、多选优先，歧义收敛后再动手 |
 | `tech-debt-audit` | 9 维度技术债审计（死代码/重复/命名漂移/复杂度/依赖/错误处理/测试/文档/安全），只读报告不改码 |
@@ -256,8 +258,9 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 - **v23-v25（对齐+安全）**：整合 6 个上游仓库、gh-cli v2.97 转义注入安全章节、procedure-driven 提示精化、DCP 窗口调优
 - **v26（本轮瘦身）**：prune:true 与 tool_output 800/20480 收紧、DCP 切换 60%/30% 百分比阈值、grilling 引入替代 writing-great-skills、opencode-config 131→64 精简、code-review 分级+validator、gh-cli 补 gh status、AGENTS.md 增 User Override、orchestrator 委托成本纪律、7 个 agent 文件净减 22 行
 - **v27（删除/迁移/新增）**：删 batch_tool 死配置、只读 agent 无效 `write: deny`、bash 3 条冗余；Context Management 段迁入 orchestrator 专属小节；只读 agent bash 白名单、read 补 `.env`；新增 tech-debt-audit 技能；15 条技能 description 瘦身 30-40%；gh-cli 补 rate limit/gh skill 宿主/gh-aw 等 5 点、code-review 增 Points of Agreement、spec-workflow 补 update 两问、orchestrator 增独立会话收集+提示词缓存安全、deep-worker 增 impact×confidence÷cost
-- **v28（纪律重构）**：缓存+thinking 纪律、scope-first+委派优先、原子 TODO 下沉 AGENTS.md；新增 5 技能至 23 个；gh-cli 补 4 条 GHSA；code-review 融入 deepreview 自我证伪；删除 .ai/calibration.yml（规则内联进 code-review）；README 十语种同步
+- **v28（纪律重构）**：缓存+thinking 纪律、scope-first+委派优先、原子 TODO 下沉 AGENTS.md；新增 5 技能至 23 个；gh-cli 补 4 条 GHSA；code-review 融入 deepreview 自我证伪；删除 .ai/calibration.yml（规则内联进 code-review）；README 双语种同步
 - **v29（审查瘦身）**：code-review 275→152 单遍化；删除 consensus/validator/严重度校准/SHA-id/Points of Agreement；证据门控审批；修复循环改由 orchestrator 拥有（无 /review-loop）；PR 回帖知识并入 gh-cli；reviewer 去掉 temperature 与 "enhanced" 表述；security-review 严重度对齐
+- **v30（模型/技能瘦身）**：provider 层 thinking 拆分（flash 关 thinking + temperature 0，pro 默认）；删全部 variant/temperature frontmatter；删 mode:subagent（instructions 保留）；dcp showCompression 关 + 删 no-op；删 verification-planning、增 wayfinder/prototype（23→24 技能）；gh-cli 649→300、spec-workflow 233→120；code-review 增两轴；修正 lsp/formatter 默认值认识（保留 true）
 
 ## 仓库结构
 
@@ -274,7 +277,7 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 │   │   ├── explore.md            # flash：代码库搜索（只读）
 │   │   ├── librarian.md          # flash：外部检索（只读）
 │   │   └── light-orchestrator.md # flash：简单编辑
-│   ├── skills/                   # 23 个按需加载技能
+│   ├── skills/                   # 24 个按需加载技能
 │   │   ├── code-review/          # 轻量单遍审查 + 证据门控
 │   │   ├── codemap/              # 生成仓库结构图
 │   │   ├── gh-cli/               # GitHub CLI v2.97+ 参考 + 安全警告
@@ -290,7 +293,8 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 │   │   ├── simplify/             # 行为保持的代码简化
 │   │   ├── spec-workflow/        # 规约驱动开发
 │   │   ├── tech-debt-audit/      # 技术债审计（9 维度，只读报告）
-│   │   ├── verification-planning/ # 实现前验证路径规划
+│   │   ├── prototype/            # 一次性原型回答设计问题
+│   │   ├── wayfinder/            # 超大工程迷雾期导航
 │   │   ├── verify-with-docs/     # 检索优先 API 验证
 │   │   ├── grilling/             # 需求对齐访谈
 │   │   ├── research/             # 开放课题深调研（带引用）
@@ -359,7 +363,7 @@ OpenCode 通过原生 `skill` 工具按需暴露技能——Agent 只在需要�
 - **Token 效率优先** —— 路径引用替代粘贴文件、技能按需加载、压缩分级管理
 - **插件增效但不喧宾夺主** —— superpowers 提供过程纪律，DCP（dcp.jsonc）主动去重+压缩阈值，内置 compaction（opencode.jsonc）自动触发+prune 兜底
 - **执行与探索分离** —— deep-worker/light-orchestrator 禁止研究/委托，explore/librarian 禁止修改
-- **缓存与 thinking 纪律** —— 静态前缀稳定以命中 DeepSeek 提示词缓存；编码任务 0 温度；thinking 强度按 agent 通过 frontmatter `variant` 键分级（low/medium/high/max，无 off 档，v4 始终推理）
+- **缓存与 thinking 纪律** —— 静态前缀稳定以命中 DeepSeek 提示词缓存；flash 关 thinking + temperature 0（provider 层），pro 默认 thinking 开
 - **Scope First + Delegate Always** —— 先定范围（2+ 步/多文件/架构变更先走 planner），再委派执行，顶层 token 只留给路由与难题
 - **原子 TODO** —— 多步任务先写有序 TODO，逐条 in_progress→completed；格式 `path: action for scenario — verify by check`
 - **持续改进** —— reflect 机制化发现摩擦、code-review 证据门控保证质量
